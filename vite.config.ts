@@ -1,9 +1,7 @@
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-// Dynamic import of ESM-only plugin to avoid `require` loading ESM in some environments
-export default async () => {
-  const reactPlugin = (await import('@vitejs/plugin-react')).default
-  return defineConfig({
-    plugins: [reactPlugin()],
-  })
-}
+// Use standard ESM export to avoid the deprecated CJS Node API
+export default defineConfig({
+  plugins: [react()],
+})
