@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: theme('colors.bakery.100');
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-bakery-100 text-bakery-900 font-body antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1,h2,h3,h4 { font-family: theme('fontFamily.display'); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+.reveal.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Homepage background: prefer bg.png (your attached photo in public/images), fallback to hero.jpg */
+#home {
+  background-image: url('/images/bg.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+/* Make hero content appear on top of background with a subtle overlay */
+.hero-overlay {
+  background: linear-gradient(rgba(251,247,242,0.6), rgba(251,247,242,0.6));
+  padding: 4rem;
+  border-radius: 1rem;
+}
