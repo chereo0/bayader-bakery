@@ -2,10 +2,13 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { WheatIcon } from './ui/Icon'
 import Button from './ui/Button'
+import { useCart } from '../context/CartContext'
+import { ShoppingCartIcon } from './ui/Icon'
 
 export default function Header(){
   const [open, setOpen] = useState(false)
-  
+  const { items } = useCart()
+
   return (
     <header className="sticky top-0 z-30 backdrop-blur-sm bg-bakery-100/80 border-b border-bakery-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,11 +22,19 @@ export default function Header(){
           <nav className="hidden md:flex items-center justify-center gap-6" aria-label="Main navigation">
             <Link to="/" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Home</Link>
             <Link to="/#about" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">About</Link>
-            <Link to="/#menu" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Menu</Link>
+            <Link to="/products" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Menu</Link>
             <Link to="/#contact" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Contact</Link>
           </nav>
 
           <div className="flex justify-end items-center gap-3">
+            <Link to="/cart" className="relative">
+              <ShoppingCartIcon className="h-6 w-6 text-bakery-900" />
+              {items.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
+                  {items.length}
+                </span>
+              )}
+            </Link>
             <div className="hidden md:flex items-center gap-3">
               <Link to="/login" className="hidden md:inline-block"><Button variant="ghost" className="px-4 py-1">Log in</Button></Link>
               <Link to="/signup" className="hidden md:inline-block"><Button className="px-4 py-1">Sign up</Button></Link>
@@ -42,7 +53,7 @@ export default function Header(){
           <nav className="flex flex-col gap-2">
             <Link to="/" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Home</Link>
             <Link to="/#about" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">About</Link>
-            <Link to="/#menu" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Menu</Link>
+            <Link to="/products" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Menu</Link>
             <Link to="/#contact" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Contact</Link>
             <div className="border-t border-bakery-200 pt-3">
               <Link to="/login" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Log in</Link>

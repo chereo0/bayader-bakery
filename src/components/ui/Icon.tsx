@@ -14,3 +14,13 @@ export function SocialIcon({ name, className='h-5 w-5' }: { name: 'instagram'|'f
   if(name==='facebook') return (<svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden><path d="M18 2h-3a4 4 0 00-4 4v3H8v4h3v8h4v-8h3l1-4h-4V6a1 1 0 011-1h2V2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>)
   return (<svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 4h16v16H4z" stroke="currentColor" strokeWidth="1.2"/><path d="M22 6L12 13 2 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>)
 }
+
+export function ShoppingCartIcon({ className='h-6 w-6' }: { className?: string }){
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M3 3h2l1 2h13l1-2h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="20" r="2" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="17" cy="20" r="2" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
