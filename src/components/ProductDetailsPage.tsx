@@ -1,151 +1,13 @@
 import React from 'react'
 import { useParams } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
-
-const products = [
-  {
-    id: 1,
-    name: 'Velvet Dream Cake',
-    description: 'Creamy, fluffy red velvet cake.',
-    price: 5.50,
-    category: 'Cakes',
-    image: '/images/cakes.jpg',
-    ingredients: ['Flour', 'Sugar', 'Eggs', 'Cocoa Powder'],
-    reviews: [
-      { user: 'Alice', comment: 'Delicious and moist!' },
-      { user: 'Bob', comment: 'Perfect for my birthday party.' }
-    ],
-    relatedProducts: [
-      { id: 2, name: 'Classic Chocolate Chip', image: '/images/cookies.jpg' },
-      { id: 3, name: 'Cookies', image: '/images/cookies.jpg' }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Classic Chocolate Chip',
-    description: 'Our best, crispy and savory.',
-    price: 5.50,
-    category: 'Cookies',
-    image: '/images/cookies.jpg',
-    ingredients: ['Flour', 'Sugar', 'Chocolate Chips'],
-    reviews: [
-      { user: 'Charlie', comment: 'Best cookies ever!' },
-      { user: 'Dana', comment: 'Perfect with milk.' }
-    ],
-    relatedProducts: [
-      { id: 1, name: 'Velvet Dream Cake', image: '/images/cakes.jpg' },
-      { id: 3, name: 'Cookies', image: '/images/cookies.jpg' }
-    ]
-  },
-  {
-    id: 3,
-    name: 'Cookies',
-    description: 'Fluffy, buttery cookies.',
-    price: 5.50,
-    category: 'Cookies',
-    image: '/images/cookies.jpg',
-    ingredients: ['Flour', 'Sugar', 'Butter'],
-    reviews: [
-      { user: 'Eve', comment: 'So soft and tasty!' },
-      { user: 'Frank', comment: 'My kids love them.' }
-    ],
-    relatedProducts: [
-      { id: 1, name: 'Velvet Dream Cake', image: '/images/cakes.jpg' },
-      { id: 2, name: 'Classic Chocolate Chip', image: '/images/cookies.jpg' }
-    ]
-  },
-  {
-    id: 4,
-    name: 'Cookies',
-    description: 'Fluffy, buttery cookies.',
-    price: 5.50,
-    category: 'Cookies',
-    image: '/images/cookies.jpg',
-    ingredients: ['Flour', 'Sugar', 'Butter'],
-    reviews: [
-      { user: 'Eve', comment: 'So soft and tasty!' },
-      { user: 'Frank', comment: 'My kids love them.' }
-    ],
-    relatedProducts: [
-      { id: 1, name: 'Velvet Dream Cake', image: '/images/cakes.jpg' },
-      { id: 2, name: 'Classic Chocolate Chip', image: '/images/cookies.jpg' }
-    ]
-  },
-  {
-    id: 5,
-    name: 'Cookies',
-    description: 'Fluffy, buttery cookies.',
-    price: 5.50,
-    category: 'Cookies',
-    image: '/images/cookies.jpg',
-    ingredients: ['Flour', 'Sugar', 'Butter'],
-    reviews: [
-      { user: 'Eve', comment: 'So soft and tasty!' },
-      { user: 'Frank', comment: 'My kids love them.' }
-    ],
-    relatedProducts: [
-      { id: 1, name: 'Velvet Dream Cake', image: '/images/cakes.jpg' },
-      { id: 2, name: 'Classic Chocolate Chip', image: '/images/cookies.jpg' }
-    ]
-  },
-  {
-    id: 6,
-    name: 'Breakms',
-    description: 'French style croissants.',
-    price: 5.50,
-    category: 'Breads',
-    image: '/images/pastries.jpg',
-    ingredients: ['Flour', 'Butter', 'Yeast'],
-    reviews: [
-      { user: 'Grace', comment: 'Perfectly flaky and buttery!' },
-      { user: 'Hank', comment: 'Best croissants I have ever had.' }
-    ],
-    relatedProducts: [
-      { id: 7, name: 'Artisan Bread', image: '/images/pastries.jpg' },
-      { id: 8, name: 'Custom Cake', image: '/images/custom.jpg' }
-    ]
-  },
-  {
-    id: 7,
-    name: 'Artisan Bread',
-    description: 'Fresh baked daily.',
-    price: 4.50,
-    category: 'Breads',
-    image: '/images/pastries.jpg',
-    ingredients: ['Flour', 'Water', 'Yeast'],
-    reviews: [
-      { user: 'Ivy', comment: 'So fresh and delicious!' },
-      { user: 'Jack', comment: 'Perfect for sandwiches.' }
-    ],
-    relatedProducts: [
-      { id: 6, name: 'Breakms', image: '/images/pastries.jpg' },
-      { id: 8, name: 'Custom Cake', image: '/images/custom.jpg' }
-    ]
-  },
-  {
-    id: 8,
-    name: 'Custom Cake',
-    description: 'Made to order for events.',
-    price: 25.00,
-    category: 'Cakes',
-    image: '/images/custom.jpg',
-    ingredients: ['Flour', 'Sugar', 'Eggs', 'Custom Decorations'],
-    reviews: [
-      { user: 'Karen', comment: 'Beautiful and delicious!' },
-      { user: 'Leo', comment: 'Perfect for my wedding.' }
-    ],
-    relatedProducts: [
-      { id: 1, name: 'Velvet Dream Cake', image: '/images/cakes.jpg' },
-      { id: 2, name: 'Classic Chocolate Chip', image: '/images/cookies.jpg' }
-    ]
-  }
-]
+import productsData from '../admin/products/data'
 
 const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const { addItem, showToast } = useCart()
 
-  const product = products.find(p => p.id === parseInt(id || ''))
+  const product = productsData.find(p => p.id === parseInt(id || ''))
 
   if (!product) {
     return <div className="min-h-screen flex items-center justify-center">Product not found.</div>
@@ -166,10 +28,17 @@ const ProductDetailsPage: React.FC = () => {
           <div>
             <h1 className="text-3xl font-display mb-4 text-[#5E372E]">{product.name}</h1>
             <p className="text-sm text-[#6b4f45] mb-4">{product.description}</p>
-            <p className="text-xl font-bold text-[#5E372E] mb-4">${product.price.toFixed(2)}</p>
+            <p className="text-xl font-bold text-[#5E372E] mb-2">${product.price.toFixed(2)}</p>
+            <div className="mb-4">
+              <span className="text-sm text-[#6b4f45] mr-3">Stock: <strong className="text-[#5E372E]">{product.stock}</strong></span>
+              <span className={`text-sm px-2 py-0.5 rounded ${product.status === 'Out of Stock' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                {product.status ?? 'Active'}
+              </span>
+            </div>
             <button
               onClick={handleAddToCart}
-              className="bg-[#6b3f2f] hover:bg-[#5a3426] text-white px-6 py-2 rounded-md shadow-md transform transition-transform hover:scale-105"
+              disabled={product.stock === 0 || product.status === 'Out of Stock'}
+              className="bg-[#6b3f2f] hover:bg-[#5a3426] text-white px-6 py-2 rounded-md shadow-md transform transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add to Cart
             </button>
@@ -184,27 +53,27 @@ const ProductDetailsPage: React.FC = () => {
         <div className="mt-12">
           <h2 className="text-2xl font-display mb-4 text-[#5E372E]">Ingredients</h2>
           <ul className="list-disc pl-6">
-            {product.ingredients.map((ingredient, index) => (
+            {product.ingredients?.map((ingredient, index) => (
               <li key={index} className="text-sm text-[#6b4f45]">{ingredient}</li>
-            ))}
+            )) ?? <li className="text-sm text-[#6b4f45]">No ingredient information.</li>}
           </ul>
         </div>
 
         <div className="mt-12">
           <h2 className="text-2xl font-display mb-4 text-[#5E372E]">Reviews</h2>
           <ul className="space-y-4">
-            {product.reviews.map((review, index) => (
+            {product.reviews?.map((review, index) => (
               <li key={index} className="bg-white p-4 rounded shadow">
                 <p className="text-sm text-[#6b4f45]"><strong>{review.user}:</strong> {review.comment}</p>
               </li>
-            ))}
+            )) ?? <li className="text-sm text-[#6b4f45]">No reviews yet.</li>}
           </ul>
         </div>
 
         <div className="mt-12">
           <h2 className="text-2xl font-display mb-4 text-[#5E372E]">Related Products</h2>
           <div className="grid grid-cols-2 gap-4">
-            {product.relatedProducts.map(related => (
+            {product.relatedProducts?.map(related => (
               <div key={related.id} className="bg-white p-4 rounded shadow">
                 <img src={related.image} alt={related.name} className="w-full h-32 object-cover rounded" />
                 <p className="text-sm text-[#6b4f45] mt-2">{related.name}</p>

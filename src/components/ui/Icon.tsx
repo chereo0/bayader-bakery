@@ -15,6 +15,15 @@ export function SocialIcon({ name, className='h-5 w-5' }: { name: 'instagram'|'f
   return (<svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 4h16v16H4z" stroke="currentColor" strokeWidth="1.2"/><path d="M22 6L12 13 2 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>)
 }
 
+export function UserCircleIcon({ className='h-6 w-6' }: { className?: string }){
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 12a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 20a8 8 0 0116 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function ShoppingCartIcon({ className='h-6 w-6' }: { className?: string }){
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>

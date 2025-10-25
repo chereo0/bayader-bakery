@@ -12,6 +12,7 @@ import ProductsPage from './components/ProductsPage'
 import CartPage from './components/CartPage'
 import Toast from './components/Toast'
 import { CartProvider } from './context/CartContext'
+import AdminDashboard from './admin/AdminDashboard'
 import ProductDetailsPage from './components/ProductDetailsPage'
 
 export default function App(){
@@ -47,6 +48,7 @@ export default function App(){
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/product/:id" element={<ProductDetailsPage />} />
             <Route path="/cart" element={<CartPage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
           </main>
           <Footer />
