@@ -23,6 +23,7 @@ export default function Header(){
             <Link to="/" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Home</Link>
             <Link to="/#about" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">About</Link>
             <Link to="/products" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Menu</Link>
+            <Link to="/events" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Events</Link>
             <Link to="/#contact" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Contact</Link>
           </nav>
 
@@ -54,6 +55,7 @@ export default function Header(){
             <Link to="/" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Home</Link>
             <Link to="/#about" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">About</Link>
             <Link to="/products" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Menu</Link>
+            <Link to="/events" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Events</Link>
             <Link to="/#contact" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Contact</Link>
             <div className="border-t border-bakery-200 pt-3">
               <Link to="/login" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Log in</Link>

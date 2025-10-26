@@ -12,7 +12,10 @@ import ProductsPage from './components/ProductsPage'
 import CartPage from './components/CartPage'
 import Toast from './components/Toast'
 import { CartProvider } from './context/CartContext'
+import AdminDashboard from './admin/AdminDashboard'
 import ProductDetailsPage from './components/ProductDetailsPage'
+import EventsList from './components/EventsList'
+import EventsPublicPage from './components/EventsPublicPage'
 
 export default function App(){
   return (
@@ -35,6 +38,9 @@ export default function App(){
                 <section id="menu" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                   <MenuGrid />
                 </section>
+                <section id="events" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                  <EventsList />
+                </section>
 
                 <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                   <Contact />
@@ -45,8 +51,11 @@ export default function App(){
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/events" element={<EventsPublicPage />} />
+            <Route path="/events/:id" element={<EventsPublicPage />} />
             <Route path="/product/:id" element={<ProductDetailsPage />} />
             <Route path="/cart" element={<CartPage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
           </main>
           <Footer />
