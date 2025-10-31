@@ -14,6 +14,7 @@ import Toast from './components/Toast'
 import { CartProvider } from './context/CartContext'
 import AdminDashboard from './admin/AdminDashboard'
 import StaffDashboard from './admin/staff/StaffDashboard'
+import DriverDashboard from './driver/DriverDashboard'
 import ProductDetailsPage from './components/ProductDetailsPage'
 import EventsList from './components/EventsList'
 import EventsPublicPage from './components/EventsPublicPage'
@@ -36,6 +37,7 @@ export default function App(){
         <Routes>
           <Route path="/staff" element={<StaffDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/driver" element={<DriverDashboard />} />
           
           <Route path="*" element={
             <PublicLayout>

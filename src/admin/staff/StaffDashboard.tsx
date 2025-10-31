@@ -5,6 +5,9 @@ import CurrentCustomerOrders from './OrdersTable'
 import ProductionQueue from './ProductionQueue'
 import DeliveryCoordination from './DeliveryCoordination'
 import StaffNotifications from './StaffNotifications'
+import InventoryAlertsPage from './InventoryAlertsPage'
+import MessagingPage from './MessagingPage'
+import StaffSettingsPage from './StaffSettingsPage'
 import { summaryStats } from './data'
 
 const StaffDashboard: React.FC = () => {
@@ -74,30 +77,15 @@ const StaffDashboard: React.FC = () => {
   )
 
   const InventoryAlertsContent = () => (
-    <div className="bg-white rounded-lg shadow-sm min-h-[600px] p-6">
-      <h2 className="text-2xl font-semibold text-[#5E372E] mb-6">Inventory Alerts</h2>
-      <div className="text-center py-12">
-        <p className="text-gray-500">Inventory alerts will be displayed here</p>
-      </div>
-    </div>
+    <InventoryAlertsPage />
   )
 
   const MessagingContent = () => (
-    <div className="bg-white rounded-lg shadow-sm min-h-[600px] p-6">
-      <h2 className="text-2xl font-semibold text-[#5E372E] mb-6">Messaging</h2>
-      <div className="text-center py-12">
-        <p className="text-gray-500">Messaging features will be displayed here</p>
-      </div>
-    </div>
+    <MessagingPage />
   )
 
   const StaffSettingsContent = () => (
-    <div className="bg-white rounded-lg shadow-sm min-h-[600px] p-6">
-      <h2 className="text-2xl font-semibold text-[#5E372E] mb-6">Staff Settings</h2>
-      <div className="text-center py-12">
-        <p className="text-gray-500">Staff settings will be displayed here</p>
-      </div>
-    </div>
+    <StaffSettingsPage />
   )
 
   const renderContent = () => {
