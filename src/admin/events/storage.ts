@@ -1,6 +1,6 @@
-import { EventItem } from './data'
+import type { EventItem } from './data'
 
-const KEY = 'sd_events'
+const KEY = 'bayader_events'
 
 export function loadEvents(): EventItem[] {
   try {
@@ -12,6 +12,6 @@ export function loadEvents(): EventItem[] {
   }
 }
 
-export function saveEvents(events: EventItem[]) {
-  localStorage.setItem(KEY, JSON.stringify(events))
+export function saveEvents(items: EventItem[]) {
+  localStorage.setItem(KEY, JSON.stringify(items))
 }

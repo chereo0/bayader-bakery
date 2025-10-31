@@ -1,35 +1,52 @@
 import React from 'react'
 
-export function WheatIcon({ className='h-6 w-6' }: { className?: string }){
+export const WheatIcon = ({ className = 'h-6 w-6', ...rest }: any) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" {...rest}>
+    <path d="M12 3v18" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M7 8c1 1.5 3 2 5 2s4-0.5 5-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const ShoppingCartIcon = ({ className = 'h-6 w-6', ...rest }: any) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" {...rest}>
+    <path d="M3 3h2l2 12h9l3-8H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="10" cy="20" r="1" fill="currentColor" />
+    <circle cx="18" cy="20" r="1" fill="currentColor" />
+  </svg>
+)
+
+export const UserCircleIcon = ({ className = 'h-6 w-6', ...rest }: any) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" {...rest}>
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M8 14c1.333-1.333 4.667-1.333 6 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    <circle cx="12" cy="9" r="1.5" fill="currentColor" />
+  </svg>
+)
+
+export const SocialIcon = ({ name = 'instagram', className = 'h-5 w-5', ...rest }: any) => {
+  if (name === 'instagram') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" {...rest}>
+        <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.2" />
+        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.2" />
+        <circle cx="17" cy="7" r="0.5" fill="currentColor" />
+      </svg>
+    )
+  }
+  if (name === 'facebook') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" {...rest}>
+        <path d="M15 8h2v-3h-2c-1 0-2 1-2 2v2H11v3h2v6h3v-6h2l1-3h-3V9c0-.5.5-1 1-1z" fill="currentColor" />
+      </svg>
+    )
+  }
+  // mail
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 20c4-6 10-8 16-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M7 9c2 1 4 1 6 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" {...rest}>
+      <path d="M3 6.5v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 6.5l9 6 9-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-export function SocialIcon({ name, className='h-5 w-5' }: { name: 'instagram'|'facebook'|'mail', className?: string }){
-  if(name==='instagram') return (<svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.2"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.2"/><path d="M17.5 6.5h.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>)
-  if(name==='facebook') return (<svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden><path d="M18 2h-3a4 4 0 00-4 4v3H8v4h3v8h4v-8h3l1-4h-4V6a1 1 0 011-1h2V2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>)
-  return (<svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden><path d="M4 4h16v16H4z" stroke="currentColor" strokeWidth="1.2"/><path d="M22 6L12 13 2 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>)
-}
-
-export function UserCircleIcon({ className='h-6 w-6' }: { className?: string }){
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M12 12a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 20a8 8 0 0116 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-export function ShoppingCartIcon({ className='h-6 w-6' }: { className?: string }){
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M3 3h2l1 2h13l1-2h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="9" cy="20" r="2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="17" cy="20" r="2" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  )
-}
+export default null

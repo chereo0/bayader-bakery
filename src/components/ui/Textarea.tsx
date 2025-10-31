@@ -1,7 +1,7 @@
 import React from 'react'
 
-export default function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>){
-  return (
-    <textarea {...props} rows={4} className={`w-full px-4 py-3 rounded-2xl bg-bakery-200 border border-transparent focus:border-bakery-700 focus:ring-2 focus:ring-bakery-200 ${props.className || ''}`} />
-  )
+type Props = React.TextareaHTMLAttributes<HTMLTextAreaElement>
+
+export default function Textarea(props: Props) {
+  return <textarea className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]" {...props} />
 }

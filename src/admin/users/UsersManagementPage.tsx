@@ -1,61 +1,80 @@
-import React, { useMemo, useState } from 'react'
-import AddCustomerButton from './AddCustomerButton'
+import React, { useState, useMemo } from 'react'
+import { Customer } from './data'
+import usersData from './data'
 import FilterBar from './FilterBar'
-import CustomerTable from './CustomerTable'
-import usersData, { Customer } from './data'
+import UserTable from './UserTable'
+import AddCustomerButton from './AddCustomerButton'
 import CustomerFormModal from './CustomerFormModal'
 
 const UsersManagementPage: React.FC = () => {
+  const [users, setUsers] = useState<Customer[]>(usersData)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
-  const [customers, setCustomers] = useState<Customer[]>(usersData)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<Customer | null>(null)
 
   const filtered = useMemo(() => {
-    return customers.filter(c => {
-      if (status !== 'all' && c.status !== status) return false
-      if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.email.toLowerCase().includes(search.toLowerCase())) return false
+    return users.filter(u => {
+      if (status !== 'all' && u.status !== status) return false
+      if (search && !u.name.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
-  }, [customers, search, status])
+  }, [users, search, status])
 
   const handleApply = () => {
-    // filters apply via filtered
+    // Filters are applied live via useMemo, but this keeps the API consistent
   }
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
-
   const handleEdit = (id: number) => {
-    const c = customers.find(x=>x.id === id)
-    if (c) {
-      setEditingCustomer(c)
+    const user = users.find(u => u.id === id)
+    if (user) {
+      setEditing(user)
       setModalOpen(true)
     }
   }
 
-  const handleAddNew = () => {
-    setEditingCustomer(null)
-    setModalOpen(true)
-  }
-
-  const handleSave = (c: Customer) => {
-    if (customers.some(x=>x.id === c.id)) {
-      setCustomers(prev => prev.map(x=> x.id === c.id ? c : x))
+  const handleSave = (customer: Customer) => {
+    if (editing && editing.id) {
+      setUsers(prev => prev.map(u => u.id === customer.id ? customer : u))
     } else {
-      const nextId = Math.max(0, ...customers.map(x=>x.id)) + 1
-      setCustomers(prev => [{ ...c, id: nextId }, ...prev])
+      setUsers(prev => {
+        const newId = prev.length > 0 ? Math.max(...prev.map(u => u.id), 0) + 1 : 1
+        return [...prev, { ...customer, id: newId }]
+      })
     }
     setModalOpen(false)
-    setEditingCustomer(null)
+    setEditing(null)
+  }
+
+  const openAdd = () => {
+    setEditing(null)
+    setModalOpen(true)
   }
 
   return (
     <div className="min-h-screen bg-[#F9F6F2] py-8" style={{ backgroundImage: "url('/images/polka.png')", backgroundRepeat: 'repeat' }}>
       <div className="max-w-6xl mx-auto px-4">
-        <AddCustomerButton onClick={handleAddNew} />
-        <FilterBar query={search} setQuery={setSearch} status={status} setStatus={setStatus} onApply={handleApply} />
-        <CustomerTable customers={filtered} onEdit={handleEdit} />
-        <CustomerFormModal open={modalOpen} customer={editingCustomer} onSave={handleSave} onClose={()=>{setModalOpen(false); setEditingCustomer(null)}} />
+        <AddCustomerButton onClick={openAdd} />
+
+        <FilterBar
+          query={search}
+          setQuery={setSearch}
+          status={status}
+          setStatus={setStatus}
+          onApply={handleApply}
+        />
+
+        <UserTable users={filtered} onEdit={handleEdit} />
+
+        <CustomerFormModal
+          open={modalOpen}
+          customer={editing}
+          onSave={handleSave}
+          onClose={() => {
+            setModalOpen(false)
+            setEditing(null)
+          }}
+        />
       </div>
     </div>
   )

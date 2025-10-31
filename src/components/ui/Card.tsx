@@ -1,8 +1,19 @@
 import React from 'react'
 
-export default function Card({ children, className='', onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }){
+type Props = React.HTMLAttributes<HTMLDivElement> & {
+  className?: string
+  onClick?: () => void
+}
+
+export default function Card({ className = '', children, onClick, ...rest }: Props) {
   return (
-    <div onClick={onClick} role={onClick? 'button':'region'} tabIndex={0} className={`bg-white rounded-2xl shadow-soft overflow-hidden ${className}`}>
+    <div
+      role={onClick ? 'button' : 'region'}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      className={`bg-white rounded-2xl shadow-soft overflow-hidden ${className}`}
+      {...rest}
+    >
       {children}
     </div>
   )
