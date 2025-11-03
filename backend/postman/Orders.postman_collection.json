@@ -1,0 +1,116 @@
+{
+  "info": {
+    "name": "Bayader Bakery - Orders",
+    "description": "Postman collection for Orders API endpoints (backend). Import into Postman and set environment variables as needed.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDU1YjgxNzc3ZDA2MGQ1ZWMwMDdjNCIsInJvbGUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AYmF5YWRlci5jb20iLCJpYXQiOjE3NjIxMjEyOTksImV4cCI6MTc2MjcyNjA5OX0.N8k5Tl49caHDuDgXRS7kRpQmu2c_KCIWLDGmgpZxvUw",
+      "type": "string"
+    },
+    {
+      "key": "customer_token",
+      "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDdkMjEwOThjMjQyNDJmNzJmMmQ2MSIsInJvbGUiOiJjdXN0b21lciIsImVtYWlsIjoibW91aGFtYWRoYXNzb3VuMzIxQGdtYWlsLmNvbSIsImlhdCI6MTc2MjEyMTE1NCwiZXhwIjoxNzYyNzI1OTU0fQ.siW2CxGLWr2rXjrYruiupSjldNojLqcQFxYgbixmrV4",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDdkMjEwOThjMjQyNDJmNzJmMmQ2MSIsInJvbGUiOiJjdXN0b21lciIsImVtYWlsIjoibW91aGFtYWRoYXNzb3VuMzIxQGdtYWlsLmNvbSIsImlhdCI6MTc2MjEyMTE1NCwiZXhwIjoxNzYyNzI1OTU0fQ.siW2CxGLWr2rXjrYruiupSjldNojLqcQFxYgbixmrV4}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [\n    { \"productId\": \"6907d3288bf4fa134a9c95ea\", \"quantity\": 2 },\n    ],\n  \"deliveryAddress\": {\n    \"line1\": \"123 Main St\",\n    \"line2\": \"Apt 4B\",\n    \"city\": \"Cairo\",\n    \"postalCode\": \"11511\",\n    \"country\": \"Egypt\",\n    \"phone\": \"+201234567890\"\n  },\n  \"payment\": { \"method\": \"cash\", \"paid\": false }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get My Orders",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{customer_token}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/orders/my", "host": ["{{baseUrl}}"], "path": ["orders","my"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Order By ID",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/orders/:id", "host": ["{{baseUrl}}"], "path": ["orders",":id"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Orders (Admin/Staff)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Order Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"confirmed\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}/orders/:id/status", "host": ["{{baseUrl}}"], "path": ["orders",":id","status"] }
+      },
+      "response": []
+    },
+    {
+      "name": "Cancel Order (Customer)",
+      "request": {
+        "method": "PATCH",
+        "header": [ { "key": "Authorization", "value": "Bearer {{customer_token}}" } ],
+        "url": { "raw": "{{baseUrl}}/orders/:id/cancel", "host": ["{{baseUrl}}"], "path": ["orders",":id","cancel"] }
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "info": {
+    "name": "Bayader Bakery - Admin Analytics",
+    "description": "Postman collection for admin analytics endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api", "type": "string" },
+    { "key": "token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Analytics - Summary",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/admin/analytics/summary?days=30&threshold=10", "host": ["{{baseUrl}}"], "path": ["admin","analytics","summary"] }
+      }
+    },
+    {
+      "name": "Analytics - Top Products",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/admin/analytics/top-products?limit=10&days=90", "host": ["{{baseUrl}}"], "path": ["admin","analytics","top-products"] }
+      }
+    },
+    {
+      "name": "Analytics - Sales By Day",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/admin/analytics/sales-by-day?days=30", "host": ["{{baseUrl}}"], "path": ["admin","analytics","sales-by-day"] }
+      }
+    }
+  ]
+}
