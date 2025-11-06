@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Support multiple common env var names (MONGO_URI or MONGODB_URI, FRONTEND_URL or CORS_ORIGIN)
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || '';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || process.env.DATABASE_URL || '';
 const FRONTEND_URL = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || '*';
 
 const required = ['JWT_SECRET'];

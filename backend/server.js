@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Bootstrap server for Bayader Bakery backend
 require('express-async-errors');
 const express = require('express');
@@ -29,7 +30,12 @@ app.get('/api', (req, res) => res.json({ success: true, message: 'Bayader Bakery
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/deliveries', require('./routes/deliveries'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/events', require('./routes/events'));
 app.use('/api/admin', require('./routes/admin'));
+// Inventory routes (wraps product stock operations and inventory queries)
+app.use('/api/inventory', require('./routes/inventory'));
 // Dev-only debug routes (do not mount in production)
 if (config.NODE_ENV === 'development') {
   app.use('/api/debug', require('./routes/debug'));

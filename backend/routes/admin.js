@@ -8,5 +8,17 @@ const { getSummary, getTopProducts, getSalesByDay } = require('../controllers/ad
 router.get('/analytics/summary', auth, requireRole('admin', 'staff'), getSummary);
 router.get('/analytics/top-products', auth, requireRole('admin', 'staff'), getTopProducts);
 router.get('/analytics/sales-by-day', auth, requireRole('admin', 'staff'), getSalesByDay);
+// recent feedbacks
+router.get('/analytics/feedbacks', auth, requireRole('admin', 'staff'), async (req, res) => {
+	const Product = require('../models/Product')
+	// unwind reviews and return latest 5
+	const agg = await Product.aggregate([
+		{ $unwind: '$reviews' },
+		{ $sort: { 'reviews.createdAt': -1 } },
+		{ $limit: 8 },
+		{ $project: { productName: '$name', user: '$reviews.userName', comment: '$reviews.comment', rating: '$reviews.rating', createdAt: '$reviews.createdAt' } }
+	])
+	res.json({ success: true, data: agg })
+})
 
 module.exports = router;

@@ -26,6 +26,15 @@ const getSummary = async (req, res) => {
   // Low stock count
   const lowStockCount = await Product.countDocuments({ stock: { $lte: threshold }, status: { $ne: 'Inactive' } });
 
+  // Pending deliveries amount (sum of orders not delivered or cancelled)
+  const pendingAgg = await Order.aggregate([
+    { $match: { createdAt: { $gte: start }, status: { $in: ['pending', 'confirmed', 'out-for-delivery'] } } },
+    { $group: { _id: null, pendingAmount: { $sum: '$totalAmount' }, pendingCount: { $sum: 1 } } }
+  ])
+
+  const pendingDeliveryAmount = (pendingAgg[0] && pendingAgg[0].pendingAmount) || 0
+  const pendingDeliveryCount = (pendingAgg[0] && pendingAgg[0].pendingCount) || 0
+
   res.json({
     success: true,
     data: {
@@ -33,6 +42,8 @@ const getSummary = async (req, res) => {
       ordersCount,
       totalCustomers,
       lowStockCount,
+      pendingDeliveryAmount,
+      pendingDeliveryCount,
       rangeDays: days,
       lowStockThreshold: threshold,
     },
@@ -90,3 +101,4 @@ const getSalesByDay = async (req, res) => {
 };
 
 module.exports = { getSummary, getTopProducts, getSalesByDay };
+
