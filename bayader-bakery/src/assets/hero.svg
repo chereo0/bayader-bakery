@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="100%" height="100%" fill="#F5E9DA" />
+  <g fill="#5A3E2B" font-family="'Cormorant Garamond', serif" font-size="48" font-weight="600">
+    <text x="80" y="160">Assorted baked goods</text>
+  </g>
+  <rect x="80" y="200" width="480" height="320" rx="20" fill="#FBF7F2" stroke="#C8A27A" />
+  <circle cx="640" cy="420" r="120" fill="#8B5E3C" opacity="0.12" />
+</svg>
