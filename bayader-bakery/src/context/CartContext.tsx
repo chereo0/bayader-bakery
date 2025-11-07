@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
 export interface CartItem {
-  id: number
+  id: string  // Changed from number to string to store MongoDB ObjectId
   name: string
   price: number
   image?: string
@@ -11,8 +11,8 @@ export interface CartItem {
 interface CartContextShape {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void
-  removeItem: (id: number) => void
-  updateQuantity: (id: number, qty: number) => void
+  removeItem: (id: string) => void
+  updateQuantity: (id: string, qty: number) => void
   clearCart: () => void
   showToast: (message: string) => void
   toast: { visible: boolean; message: string }
@@ -20,7 +20,7 @@ interface CartContextShape {
 
 const CartContext = createContext<CartContextShape | undefined>(undefined)
 
-const CART_KEY = 'bayader_cart_v1'
+const CART_KEY = 'bayader_cart_v2'  // Updated to force clear old numeric IDs
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -52,9 +52,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })
   }
 
-  const removeItem = (id: number) => setItems(prev => prev.filter(p => p.id !== id))
+  const removeItem = (id: string) => setItems(prev => prev.filter(p => p.id !== id))
 
-  const updateQuantity = (id: number, qty: number) => {
+  const updateQuantity = (id: string, qty: number) => {
     if (qty <= 0) return removeItem(id)
     setItems(prev => prev.map(p => p.id === id ? { ...p, quantity: qty } : p))
   }

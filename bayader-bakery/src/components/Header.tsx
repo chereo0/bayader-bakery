@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { WheatIcon } from './ui/Icon'
 import Button from './ui/Button'
 import { useCart } from '../context/CartContext'
@@ -12,25 +12,29 @@ export default function Header(){
   const { items } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const scrollToSection = (sectionId: string) => {
+    if (location.pathname !== '/') {
+      navigate('/')
+      setTimeout(() => {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 100)
+    } else {
+      const element = document.getElementById(sectionId)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+  }
 
   const handleLogout = () => {
     logout()
     setProfileOpen(false)
     navigate('/')
-  }
-
-  const getDashboardLink = () => {
-    if (!user) return '/'
-    switch (user.role) {
-      case 'admin':
-        return '/admin'
-      case 'staff':
-        return '/staff'
-      case 'driver':
-        return '/driver'
-      default:
-        return '/'
-    }
   }
 
   return (
@@ -44,11 +48,11 @@ export default function Header(){
           </Link>
 
           <nav className="hidden md:flex items-center justify-center gap-6" aria-label="Main navigation">
-            <Link to="/" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Home</Link>
-            <Link to="/#about" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">About</Link>
+            <button onClick={() => scrollToSection('home')} className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700 transition-colors">Home</button>
+            <button onClick={() => scrollToSection('about')} className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700 transition-colors">About</button>
             <Link to="/products" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Menu</Link>
             <Link to="/events" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Events</Link>
-            <Link to="/#contact" className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700">Contact</Link>
+            <button onClick={() => scrollToSection('contact')} className="text-bakery-900 hover:text-bakery-700 focus:outline-none focus:ring-2 focus:ring-bakery-700 transition-colors">Contact</button>
           </nav>
 
           <div className="flex justify-end items-center gap-3">
@@ -75,11 +79,11 @@ export default function Header(){
                   {profileOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-bakery-200">
                       <Link
-                        to={getDashboardLink()}
+                        to="/orders"
                         onClick={() => setProfileOpen(false)}
                         className="block px-4 py-2 text-sm text-bakery-900 hover:bg-bakery-100"
                       >
-                        Dashboard
+                        My Orders
                       </Link>
                       <Link
                         to="/profile"
@@ -116,18 +120,18 @@ export default function Header(){
       {open && (
         <div className="md:hidden px-4 pb-4">
           <nav className="flex flex-col gap-2">
-            <Link to="/" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Home</Link>
-            <Link to="/#about" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">About</Link>
+            <button onClick={() => { scrollToSection('home'); setOpen(false) }} className="block text-left px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200 transition-colors">Home</button>
+            <button onClick={() => { scrollToSection('about'); setOpen(false) }} className="block text-left px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200 transition-colors">About</button>
             <Link to="/products" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Menu</Link>
             <Link to="/events" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Events</Link>
-            <Link to="/#contact" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Contact</Link>
+            <button onClick={() => { scrollToSection('contact'); setOpen(false) }} className="block text-left px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200 transition-colors">Contact</button>
             <div className="border-t border-bakery-200 pt-3">
               {isAuthenticated && user ? (
                 <>
                   <div className="px-3 py-2 text-sm text-bakery-900">
                     Welcome, <strong>{user.name.split(' ')[0]}</strong>
                   </div>
-                  <Link to={getDashboardLink()} onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Dashboard</Link>
+                  <Link to="/orders" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">My Orders</Link>
                   <Link to="/profile" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">My Profile</Link>
                   <button 
                     onClick={() => { handleLogout(); setOpen(false); }} 

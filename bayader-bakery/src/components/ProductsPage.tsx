@@ -1,15 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { gsap } from 'gsap'
 import { useCart } from '../context/CartContext'
 import { Link } from 'react-router-dom'
+import Button from './ui/Button'
+import { productApi, Product as ApiProduct } from '../utils/api'
 
-interface Product {
-  id: number
-  name: string
-  description: string
-  price: number
-  category: string
-  image: string
+interface Product extends ApiProduct {
+  id?: string | number;
 }
 
 const ProductsPage: React.FC = () => {
@@ -17,77 +14,212 @@ const ProductsPage: React.FC = () => {
   const productsRef = useRef<Array<HTMLDivElement | null>>([])
   const dotsRef = useRef<Array<HTMLDivElement | null>>([])
 
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [priceFilter, setPriceFilter] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState<string>('')
+  const [sortBy, setSortBy] = useState<'name' | 'price-low' | 'price-high'>('name')
+  const [categories, setCategories] = useState<string[]>(['Cakes', 'Pastries', 'Breads', 'Cookies', 'Custom Orders', 'Seasonal'])
 
-  const products: Product[] = [
+  // Fallback products in case backend is not available
+  const fallbackProducts: Product[] = [
     {
-      id: 1,
+      _id: '1',
       name: 'Velvet Dream Cake',
       description: 'Creamy, fluffy red velvet cake.',
       price: 5.50,
       category: 'Cakes',
-      image: '/images/cakes.jpg'
+      image: '/images/cakes.jpg',
+      stock: 10,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     {
-      id: 2,
-      name: 'Cakes',
+      _id: '2',
+      name: 'Chocolate Layer Cake',
       description: 'Perfect for any occasion.',
-      price: 5.50,
+      price: 7.50,
       category: 'Cakes',
-      image: '/images/cakes.jpg'
+      image: '/images/cakes.jpg',
+      stock: 8,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     {
-      id: 3,
+      _id: '3',
       name: 'Classic Chocolate Chip',
       description: 'Our best, crispy and savory.',
       price: 5.50,
       category: 'Cookies',
-      image: '/images/cookies.jpg'
+      image: '/images/cookies.jpg',
+      stock: 15,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     {
-      id: 4,
-      name: 'Butella Themalt Muffords',
+      _id: '4',
+      name: 'Vanilla Macaron',
       description: 'Creamy, fluffy macaron.',
       price: 5.50,
-      category: 'Cakes',
-      image: '/images/cakes.jpg'
+      category: 'Pastries',
+      image: '/images/cakes.jpg',
+      stock: 12,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     {
-      id: 5,
-      name: 'Cookies',
+      _id: '5',
+      name: 'Butter Cookies',
       description: 'Fluffy, buttery cookies.',
       price: 5.50,
       category: 'Cookies',
-      image: '/images/cookies.jpg'
+      image: '/images/cookies.jpg',
+      stock: 20,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     {
-      id: 6,
-      name: 'Breakms',
+      _id: '6',
+      name: 'French Croissants',
       description: 'French style croissants.',
       price: 5.50,
-      category: 'Breads',
-      image: '/images/pastries.jpg'
+      category: 'Pastries',
+      image: '/images/pastries.jpg',
+      stock: 14,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     {
-      id: 7,
+      _id: '7',
       name: 'Artisan Bread',
       description: 'Fresh baked daily.',
       price: 4.50,
       category: 'Breads',
-      image: '/images/pastries.jpg'
+      image: '/images/pastries.jpg',
+      stock: 18,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     {
-      id: 8,
+      _id: '8',
       name: 'Custom Cake',
       description: 'Made to order for events.',
       price: 25.00,
       category: 'Cakes',
-      image: '/images/custom.jpg'
+      image: '/images/custom.jpg',
+      stock: 5,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      _id: '9',
+      name: 'Sourdough Loaf',
+      description: 'Tangy and delicious.',
+      price: 6.50,
+      category: 'Breads',
+      image: '/images/pastries.jpg',
+      stock: 9,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      _id: '10',
+      name: 'Chocolate Éclair',
+      description: 'Classic French pastry.',
+      price: 4.00,
+      category: 'Pastries',
+      image: '/images/pastries.jpg',
+      stock: 11,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
   ]
 
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(products)
+  // Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true)
+      setError(null)
+      
+      try {
+        const result = await productApi.getProducts({
+          limit: 100,
+          status: 'Active'
+        })
+
+        if (result.success && result.data?.products) {
+          setProducts(result.data.products.map(p => ({
+            ...p,
+            image: p.image || '/images/products.jpg'
+            // Don't set id - use _id directly
+          })))
+        } else {
+          console.warn('Using fallback products - Backend not available')
+          setProducts(fallbackProducts)
+        }
+      } catch (err) {
+        console.warn('Error fetching products, using fallback:', err)
+        setProducts(fallbackProducts)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
+  // Extract unique categories from products
+  const dynamicCategories = useMemo(() => {
+    const cats = Array.from(new Set(products.map(p => p.category)))
+    return cats.sort()
+  }, [products])
+
+  const filteredProducts = useMemo(() => {
+    let filtered = products
+
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(p => p.category === selectedCategory)
+    }
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Apply price filter
+    if (priceFilter === 'low') {
+      filtered = filtered.filter(p => p.price < 10)
+    } else if (priceFilter === 'high') {
+      filtered = filtered.filter(p => p.price >= 10)
+    }
+
+    // Apply sorting
+    if (sortBy === 'price-low') {
+      filtered.sort((a, b) => a.price - b.price)
+    } else if (sortBy === 'price-high') {
+      filtered.sort((a, b) => b.price - a.price)
+    } else if (sortBy === 'name') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    return filtered
+  }, [selectedCategory, priceFilter, searchTerm, sortBy])
 
   useEffect(() => {
     // Page fade in
@@ -130,22 +262,6 @@ const ProductsPage: React.FC = () => {
     }
   }, [filteredProducts])
 
-  const handleApplyFilters = () => {
-    let filtered = products
-
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(p => p.category === categoryFilter)
-    }
-
-    if (priceFilter === 'low') {
-      filtered = filtered.filter(p => p.price < 10)
-    } else if (priceFilter === 'high') {
-      filtered = filtered.filter(p => p.price >= 10)
-    }
-
-    setFilteredProducts(filtered)
-  }
-
   const setRef = <T extends HTMLElement>(collection: React.MutableRefObject<Array<T | null>>, idx: number) => (el: T | null) => {
     collection.current[idx] = el
   }
@@ -153,7 +269,19 @@ const ProductsPage: React.FC = () => {
   const { addItem, showToast } = useCart()
 
   const handleAddToCart = (product: Product) => {
-    addItem({ id: product.id, name: product.name, price: product.price, image: product.image })
+    // Use the MongoDB _id directly - must be a string ObjectId, not a number
+    const productId = product._id;
+    if (!productId || typeof productId !== 'string') {
+      console.error('Invalid product ID:', productId, 'Type:', typeof productId);
+      showToast('Error: Invalid product ID');
+      return;
+    }
+    addItem({ 
+      id: productId, 
+      name: product.name, 
+      price: product.price, 
+      image: product.image 
+    })
     showToast(`${product.name} added to cart!`)
   }
 
@@ -210,31 +338,58 @@ const ProductsPage: React.FC = () => {
 
         {/* Filter Section */}
         <div className="bg-white/95 rounded-xl shadow-md p-6 mb-8">
+          {/* Search Bar */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-bakery-900 mb-2">Search Products</label>
+            <input
+              type="text"
+              placeholder="Search by name or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-bakery-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-bakery-700 transition"
+            />
+          </div>
+
+          {/* Category Buttons */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-bakery-900 mb-3">Categories</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  selectedCategory === 'all'
+                    ? 'bg-bakery-900 text-white'
+                    : 'bg-bakery-100 text-bakery-900 hover:bg-bakery-200'
+                }`}
+              >
+                All Products ({products.length})
+              </button>
+              {dynamicCategories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    selectedCategory === cat
+                      ? 'bg-bakery-900 text-white'
+                      : 'bg-bakery-100 text-bakery-900 hover:bg-bakery-200'
+                  }`}
+                >
+                  {cat} ({products.filter(p => p.category === cat).length})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Filter Controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#6b4f45] mb-2">
-                Filter by Category
-              </label>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a] bg-white"
-              >
-                <option value="all">All Categories</option>
-                <option value="Cakes">Cakes</option>
-                <option value="Breads">Breads</option>
-                <option value="Cookies">Cookies</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-[#6b4f45] mb-2">
-                Filter by Price
+              <label className="block text-sm font-semibold text-bakery-900 mb-2">
+                Price Range
               </label>
               <select
                 value={priceFilter}
                 onChange={(e) => setPriceFilter(e.target.value)}
-                className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a] bg-white"
+                className="w-full rounded-lg border border-bakery-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-bakery-700 bg-white"
               >
                 <option value="all">All Prices</option>
                 <option value="low">Under $10</option>
@@ -242,59 +397,159 @@ const ProductsPage: React.FC = () => {
               </select>
             </div>
 
-            <div className="flex items-end">
-              <button
-                onClick={handleApplyFilters}
-                className="w-full bg-[#6b3f2f] hover:bg-[#5a3426] text-white px-6 py-2 rounded-md shadow-md transform transition-transform hover:scale-105"
+            <div>
+              <label className="block text-sm font-semibold text-bakery-900 mb-2">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full rounded-lg border border-bakery-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-bakery-700 bg-white"
               >
-                Apply Filters
-              </button>
+                <option value="name">Name (A-Z)</option>
+                <option value="price-low">Price (Low to High)</option>
+                <option value="price-high">Price (High to Low)</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                onClick={() => {
+                  setSelectedCategory('all')
+                  setPriceFilter('all')
+                  setSearchTerm('')
+                  setSortBy('name')
+                }}
+                variant="ghost"
+                className="w-full"
+              >
+                Clear Filters
+              </Button>
             </div>
           </div>
+
+          {/* Active Filters Summary */}
+          {(selectedCategory !== 'all' || priceFilter !== 'all' || searchTerm || sortBy !== 'name') && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+              <strong>Active Filters:</strong> 
+              {selectedCategory !== 'all' && ` Category: ${selectedCategory}`}
+              {priceFilter !== 'all' && ` | Price: ${priceFilter === 'low' ? 'Under $10' : '$10+'}`}
+              {searchTerm && ` | Search: "${searchTerm}"`}
+              {sortBy !== 'name' && ` | Sort: ${sortBy.replace('-', ' ')}`}
+            </div>
+          )}
         </div>
+
+        {/* Products Count */}
+        <div className="mb-4 text-sm text-bakery-700">
+          Showing <strong>{filteredProducts.length}</strong> product{filteredProducts.length !== 1 ? 's' : ''}
+          {selectedCategory !== 'all' && ` in ${selectedCategory}`}
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="inline-block animate-spin">
+                <svg className="w-12 h-12 text-bakery-900" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <p className="mt-4 text-bakery-700 font-medium">Loading products...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+            <p className="font-medium">Error loading products:</p>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
+        )}
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product, index) => (
-            <div
-              key={product.id}
-              ref={(el) => (productsRef.current[index] = el)}
-              className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-transform hover:scale-105 hover:shadow-xl"
-            >
-              <div className="h-48 overflow-hidden">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-display text-[#5E372E] mb-1">
-                  {product.name}
-                </h3>
-                <p className="text-xs text-[#6b4f45] mb-3">
-                  {product.description}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold text-[#5E372E]">
-                    ${product.price.toFixed(2)}
-                  </span>
-                  <Link
-                    to={`/product/${product.id}`}
-                    className="bg-[#6b3f2f] hover:bg-[#5a3426] text-white px-4 py-2 rounded-md text-sm shadow-md transform transition-transform hover:scale-105"
-                  >
-                    View Details
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {!loading && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProducts.map((product, index) => (
+                <div
+                  key={product._id}
+                  ref={(el) => (productsRef.current[index] = el)}
+                  className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:scale-105 flex flex-col h-full"
+                >
+                  {/* Product Image */}
+                  <div className="relative h-48 overflow-hidden bg-bakery-100 flex-shrink-0">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                    />
+                    {/* Category Badge */}
+                    <div className="absolute top-3 right-3 bg-bakery-900 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                      {product.category}
+                    </div>
+                  </div>
 
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-[#6b4f45] text-lg">No products found matching your filters.</p>
-          </div>
+                  {/* Product Info */}
+                  <div className="p-4 flex flex-col justify-between flex-1">
+                    <div>
+                      <h3 className="text-lg font-display text-bakery-900 mb-1 line-clamp-2">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-bakery-700 mb-3 line-clamp-2">
+                        {product.description}
+                      </p>
+
+                      {/* Price */}
+                      <div className="flex items-center justify-between pt-3 border-t border-bakery-200">
+                        <span className="text-2xl font-bold text-bakery-900">
+                          ${product.price.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        onClick={() => handleAddToCart(product)}
+                        className="flex-1 text-sm"
+                      >
+                        Add to Cart
+                      </Button>
+                      <Link
+                        to={`/product/${product._id}`}
+                        className="flex-1"
+                      >
+                        <Button variant="ghost" className="w-full text-sm">
+                          Details →
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredProducts.length === 0 && (
+              <div className="text-center py-16">
+                <div className="text-5xl mb-4">🔍</div>
+                <h3 className="text-xl font-display text-bakery-900 mb-2">No products found</h3>
+                <p className="text-bakery-700 mb-6">Try adjusting your filters or search terms</p>
+                <Button 
+                  onClick={() => {
+                    setSelectedCategory('all')
+                    setPriceFilter('all')
+                    setSearchTerm('')
+                    setSortBy('name')
+                  }}
+                >
+                  Clear All Filters
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

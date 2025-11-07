@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const formRef = useRef<HTMLDivElement | null>(null)
   const inputRefs = useRef<Array<HTMLInputElement | null>>([])
   const dotsRef = useRef<Array<HTMLDivElement | null>>([])
@@ -21,6 +21,12 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
+    // Redirect to home if already logged in
+    if (isAuthenticated) {
+      navigate('/')
+      return
+    }
+
     // Page fade in
     gsap.fromTo(
       '.login-page-container',

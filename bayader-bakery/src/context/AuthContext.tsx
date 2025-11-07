@@ -18,6 +18,7 @@ interface AuthContextType {
   register: (userData: RegisterData) => Promise<User>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  updateProfile: (userData: Partial<User> & { password?: string }) => Promise<User>;
 }
 
 interface RegisterData {
@@ -133,6 +134,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateProfile = async (userData: Partial<User> & { password?: string }): Promise<User> => {
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update profile');
+      }
+
+      if (data.success && data.data) {
+        const updatedUser = data.data;
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        return updatedUser;
+      }
+      
+      throw new Error('Invalid response from server');
+    } catch (err) {
+      console.error('Update profile error:', err);
+      throw err;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -142,6 +174,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     register,
     logout,
     updateUser,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

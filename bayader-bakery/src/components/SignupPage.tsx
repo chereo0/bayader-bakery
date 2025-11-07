@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, isAuthenticated } = useAuth();
   const formRef = useRef<HTMLDivElement | null>(null);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const dotsRef = useRef<Array<HTMLDivElement | null>>([]);
@@ -23,6 +23,12 @@ const SignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Redirect to home if already logged in
+    if (isAuthenticated) {
+      navigate('/')
+      return
+    }
+
     // Form entrance and input stagger  
     if (formRef.current) {
       gsap.fromTo(

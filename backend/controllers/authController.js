@@ -163,3 +163,46 @@ exports.getMe = async (req, res) => {
     });
   }
 };
+
+// @route   PUT /api/auth/me
+// @desc    Update current user profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, phone, address, password } = req.body;
+    
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update allowed fields
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (address !== undefined) user.address = address;
+    if (password) user.password = password; // Will be hashed by pre-save hook
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        address: user.address
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Server error'
+    });
+  }
+};

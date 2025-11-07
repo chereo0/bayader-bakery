@@ -18,6 +18,8 @@ import StaffDashboard from './admin/staff/StaffDashboard'
 import ProductDetailsPage from './components/ProductDetailsPage'
 import EventsList from './components/EventsList'
 import EventsPublicPage from './components/EventsPublicPage'
+import MyOrdersPage from './components/MyOrdersPage'
+import ProfilePage from './components/ProfilePage'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -67,11 +69,13 @@ export default function App(){
 
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/products" element={<ProductsPage />} />
                 <Route path="/events" element={<EventsPublicPage />} />
                 <Route path="/events/:id" element={<EventsPublicPage />} />
                 <Route path="/product/:id" element={<ProductDetailsPage />} />
                 <Route path="/cart" element={<CartPage />} />
+                <Route path="/orders" element={<MyOrdersPage />} />
               </Routes>
             </PublicLayout>
           } />

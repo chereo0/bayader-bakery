@@ -14,9 +14,12 @@ const getProducts = async (req, res) => {
     query.category = category;
   }
 
-  // Filter by status
+  // Filter by status - For public users, default to 'Active' status only
   if (status) {
     query.status = status;
+  } else {
+    // Default to showing only Active products for public users
+    query.status = 'Active';
   }
 
   // Search in name and description
