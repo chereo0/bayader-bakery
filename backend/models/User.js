@@ -33,6 +33,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  department: {
+    type: String,
+    enum: ['Production', 'Delivery', 'Quality Control', 'Management'],
+    trim: true
+  },
+  settings: {
+    notifications: {
+      email: { type: Boolean, default: true },
+      push: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false }
+    },
+    preferences: {
+      language: { type: String, default: 'en', enum: ['en', 'ar'] },
+      theme: { type: String, default: 'light', enum: ['light', 'dark'] },
+      timezone: { type: String, default: 'UTC+3' }
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

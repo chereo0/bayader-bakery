@@ -190,6 +190,97 @@ const getMyDeliveries = async (req, res) => {
   }
 };
 
+// Get all drivers with their status for staff dashboard
+const getDrivers = async (req, res) => {
+  try {
+    const drivers = await User.find({ role: 'driver' })
+      .select('name email phone')
+      .lean();
+
+    // Get current deliveries for each driver
+    const driversWithDeliveries = await Promise.all(
+      drivers.map(async (driver) => {
+        const currentDelivery = await Delivery.findOne({
+          driver: driver._id,
+          status: { $in: ['assigned', 'in-transit'] }
+        })
+          .populate({
+            path: 'order',
+            select: 'orderNumber user deliveryAddress',
+            populate: {
+              path: 'user',
+              select: 'name'
+            }
+          })
+          .lean();
+
+        return {
+          _id: driver._id,
+          name: driver.name,
+          email: driver.email,
+          phone: driver.phone,
+          status: currentDelivery ? 'on-route' : 'available',
+          currentOrder: currentDelivery ? {
+            _id: currentDelivery._id,
+            orderNumber: currentDelivery.order?.orderNumber,
+            customerName: currentDelivery.order?.user?.name || 'N/A',
+            destination: currentDelivery.order?.deliveryAddress || 'N/A'
+          } : null
+        };
+      })
+    );
+
+    logger.info(`Drivers fetched: ${driversWithDeliveries.length} drivers`);
+
+    res.json({
+      success: true,
+      data: driversWithDeliveries
+    });
+  } catch (error) {
+    logger.error('Error fetching drivers', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Get delivery statistics for dashboard
+const getDeliveryStats = async (req, res) => {
+  try {
+    const stats = await Delivery.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const statsByStatus = {
+      pending: 0,
+      assigned: 0,
+      'in-transit': 0,
+      delivered: 0,
+      failed: 0,
+      cancelled: 0
+    };
+
+    stats.forEach(stat => {
+      if (statsByStatus.hasOwnProperty(stat._id)) {
+        statsByStatus[stat._id] = stat.count;
+      }
+    });
+
+    logger.info('Delivery statistics calculated', statsByStatus);
+
+    res.json({
+      success: true,
+      data: statsByStatus
+    });
+  } catch (error) {
+    logger.error('Error fetching delivery stats', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createDelivery,
   getAllDeliveries,
@@ -197,4 +288,6 @@ module.exports = {
   assignDriver,
   updateDeliveryStatus,
   getMyDeliveries,
+  getDrivers,
+  getDeliveryStats,
 };

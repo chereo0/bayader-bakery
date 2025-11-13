@@ -9,6 +9,8 @@ const {
   getAllOrders,
   updateOrderStatus,
   cancelOrder,
+  getStaffOrders,
+  getStaffOrderStats,
 } = require('../controllers/orderController');
 
 // Customer: create order
@@ -19,6 +21,12 @@ router.get('/my', auth, getMyOrders);
 
 // Get order by id (owner or admin/staff/driver)
 router.get('/:id', auth, getOrderById);
+
+// Staff: get orders organized by status for staff dashboard
+router.get('/staff/dashboard', auth, requireRole('staff', 'admin'), getStaffOrders);
+
+// Staff: get order status statistics
+router.get('/staff/stats', auth, requireRole('staff', 'admin'), getStaffOrderStats);
 
 // Admin/Staff: list all orders
 router.get('/', auth, requireRole('admin', 'staff'), getAllOrders);

@@ -7,11 +7,19 @@ const {
   getUser,
   createUser,
   updateUser,
-  deleteUser
-  ,bulkDeleteUsers
+  deleteUser,
+  bulkDeleteUsers,
+  getMySettings,
+  updateMySettings,
+  updateMyPassword
 } = require('../controllers/userController');
 
-// Public: allow listing only for admins (protected)
+// Staff/User settings routes (protected, any authenticated user)
+router.get('/settings/me', auth, getMySettings);
+router.put('/settings/me', auth, updateMySettings);
+router.put('/settings/me/password', auth, updateMyPassword);
+
+// Admin routes
 router.get('/', auth, requireRole('admin'), listUsers);
 router.get('/:id', auth, requireRole('admin'), getUser);
 router.post('/', auth, requireRole('admin'), createUser);

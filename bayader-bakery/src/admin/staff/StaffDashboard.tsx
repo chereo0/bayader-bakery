@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import StaffSidebar from './StaffSidebar'
 import SummaryCards from './SummaryCards'
 import CurrentCustomerOrders from './OrdersTable'
@@ -8,18 +8,100 @@ import StaffNotifications from './StaffNotifications'
 import InventoryAlertsPage from './InventoryAlertsPage'
 import MessagingPage from './MessagingPage'
 import StaffSettingsPage from './StaffSettingsPage'
-import { summaryStats } from './data'
+import QuickActions from './QuickActions'
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+interface DashboardStats {
+  newOrders: number
+  inProduction: number
+  readyForDispatch: number
+}
+
+interface DashboardData {
+  summary: DashboardStats
+  trends: {
+    orders: number[]
+    production: number[]
+  }
+}
 
 const StaffDashboard: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<string>('Dashboard')
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    if (selectedTab === 'Dashboard') {
+      fetchDashboardData();
+      const interval = setInterval(fetchDashboardData, 60000); // Refresh every 60 seconds
+      return () => clearInterval(interval);
+    }
+  }, [selectedTab]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!token) {
+        setError('No authentication token found');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch dashboard data: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      setDashboardData(result.data);
+      setLoading(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load dashboard data';
+      setError(message);
+      setLoading(false);
+    }
+  };
 
   const DashboardContent = () => (
     <div className="space-y-6">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <SummaryCards title="New Orders" value={summaryStats.newOrders} trend={[8, 10, 9, 12, 11, 12]} />
-        <SummaryCards title="In Production" value={summaryStats.inProduction} trend={[15, 18, 20, 19, 20, 20]} />
-        <SummaryCards title="Ready for Dispatch" value={summaryStats.readyForDispatch} trend={[1, 2, 3, 2, 3, 3]} />
+        <SummaryCards 
+          title="New Orders" 
+          value={dashboardData?.summary.newOrders || 0} 
+          trend={dashboardData?.trends.orders || [0, 0, 0, 0, 0, 0]}
+          loading={loading}
+        />
+        <SummaryCards 
+          title="In Production" 
+          value={dashboardData?.summary.inProduction || 0} 
+          trend={dashboardData?.trends.production || [0, 0, 0, 0, 0, 0]}
+          loading={loading}
+        />
+        <SummaryCards 
+          title="Ready for Dispatch" 
+          value={dashboardData?.summary.readyForDispatch || 0} 
+          trend={[0, 0, 1, 1, 2, 3]}
+          loading={loading}
+        />
       </div>
 
       {/* Main Content Grid */}
@@ -38,22 +120,11 @@ const StaffDashboard: React.FC = () => {
           {/* Delivery Coordination */}
           <DeliveryCoordination />
 
-          {/* Inventory & Issue Reporting */}
-          <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
-            <h3 className="text-lg font-semibold text-[#5E372E]">Quick Actions</h3>
-            <button className="w-full px-4 py-3 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors font-medium flex items-center justify-center gap-2">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Assign Ready Order
-            </button>
-            <button className="w-full px-4 py-3 border-2 border-[#5E372E] text-[#5E372E] rounded-md hover:bg-gray-50 transition-colors font-medium flex items-center justify-center gap-2">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Report Production Issue
-            </button>
-          </div>
+          {/* Quick Actions */}
+          <QuickActions 
+            onOrderAssigned={fetchDashboardData}
+            onIssueReported={fetchDashboardData}
+          />
 
           {/* Staff Notifications */}
           <StaffNotifications />

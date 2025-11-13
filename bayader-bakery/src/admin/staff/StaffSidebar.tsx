@@ -44,6 +44,12 @@ const SettingsIcon = () => (
   </svg>
 )
 
+const LogoutIcon = () => (
+  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 9V5.25A2.25 2.25 0 0110.5 3h12a2.25 2.25 0 012.25 2.25v13.5A2.25 2.25 0 0122.5 21h-12a2.25 2.25 0 01-2.25-2.25V15m-3 0l3-3m0 0l-3-3m3 3H2.25" />
+  </svg>
+)
+
 const StaffSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
   const items: Item[] = [
     { key: 'Dashboard', label: 'Dashboard', icon: <HomeIcon /> },
@@ -54,13 +60,19 @@ const StaffSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => 
     { key: 'Staff Settings', label: 'Staff Settings', icon: <SettingsIcon /> },
   ]
 
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.location.href = '/'
+  }
+
   return (
-    <aside className="w-64 bg-[#5E372E] text-white min-h-screen hidden md:block">
+    <aside className="w-64 bg-[#5E372E] text-white min-h-screen hidden md:flex flex-col">
       <div className="p-6 border-b border-b-[#6f453f]">
         <h2 className="font-display text-2xl">EL-Bayader Admin</h2>
       </div>
 
-      <nav className="p-4">
+      <nav className="p-4 flex-1">
         <ul className="space-y-2">
           {items.map((it) => (
             <li key={it.key} className="group">
@@ -77,6 +89,18 @@ const StaffSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => 
           ))}
         </ul>
       </nav>
+
+      <div className="p-4 border-t border-t-[#6f453f]">
+        <button
+          onClick={handleLogout}
+          className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-[#6b453f]"
+        >
+          <span className="w-6 h-6 text-[#f3e9e5] flex items-center justify-center">
+            <LogoutIcon />
+          </span>
+          <span className="font-medium">Logout</span>
+        </button>
+      </div>
     </aside>
   )
 }

@@ -103,4 +103,128 @@ const bulkDeleteUsers = async (req, res) => {
   res.json({ success: true, deletedCount: result.deletedCount || 0, requested: ids.length, deletedIds: existingIds, missing, skippedSelf: requesterId && ids.includes(requesterId) });
 }
 
-module.exports = { listUsers, getUser, createUser, updateUser, deleteUser, bulkDeleteUsers };
+// GET /api/users/settings/me - Get current user's settings
+const getMySettings = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('name email phone department settings');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const settings = {
+      profile: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        department: user.department || 'Production'
+      },
+      notifications: user.settings?.notifications || {
+        email: true,
+        push: true,
+        sms: false
+      },
+      preferences: user.settings?.preferences || {
+        language: 'en',
+        theme: 'light',
+        timezone: 'UTC+3'
+      }
+    };
+    
+    res.json({ success: true, data: settings });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT /api/users/settings/me - Update current user's settings
+const updateMySettings = async (req, res) => {
+  try {
+    const { profile, notifications, preferences } = req.body;
+    
+    const updates = {};
+    
+    if (profile) {
+      if (profile.name) updates.name = profile.name;
+      if (profile.email) {
+        const exists = await User.findOne({ email: profile.email, _id: { $ne: req.user.id } });
+        if (exists) return res.status(409).json({ success: false, message: 'Email already in use' });
+        updates.email = profile.email;
+      }
+      if (profile.phone) updates.phone = profile.phone;
+      if (profile.department) updates.department = profile.department;
+    }
+    
+    if (notifications) {
+      updates['settings.notifications'] = {
+        email: notifications.email !== undefined ? notifications.email : true,
+        push: notifications.push !== undefined ? notifications.push : true,
+        sms: notifications.sms !== undefined ? notifications.sms : false
+      };
+    }
+    
+    if (preferences) {
+      updates['settings.preferences'] = {
+        language: preferences.language || 'en',
+        theme: preferences.theme || 'light',
+        timezone: preferences.timezone || 'UTC+3'
+      };
+    }
+    
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updates,
+      { new: true, runValidators: true }
+    ).select('name email phone department settings');
+    
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const settings = {
+      profile: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        department: user.department || 'Production'
+      },
+      notifications: user.settings?.notifications || {
+        email: true,
+        push: true,
+        sms: false
+      },
+      preferences: user.settings?.preferences || {
+        language: 'en',
+        theme: 'light',
+        timezone: 'UTC+3'
+      }
+    };
+    
+    res.json({ success: true, data: settings, message: 'Settings updated successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT /api/users/settings/me/password - Change password for current user
+const updateMyPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current and new passwords are required' });
+    }
+    
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+    
+    user.password = newPassword;
+    await user.save();
+    
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { listUsers, getUser, createUser, updateUser, deleteUser, bulkDeleteUsers, getMySettings, updateMySettings, updateMyPassword };

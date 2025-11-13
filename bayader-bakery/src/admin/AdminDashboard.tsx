@@ -7,6 +7,7 @@ import InventoryPage from './inventory/InventoryPage'
 import EventsPage from './events/EventsPage'
 import OrdersManagementPage from './orders/OrdersManagementPage'
 import DeliveriesManagementPage from './deliveries/DeliveriesManagementPage'
+import DriversManagementPage from './drivers/DriversManagementPage'
 import DashboardStats from './DashboardStats'
 import SalesChart from './SalesChart'
 import OrdersTable from './OrdersTable'
@@ -91,6 +92,10 @@ const AdminDashboard: React.FC = () => {
 
             {selectedTab === 'Deliveries' && (
               <DeliveriesManagementPage />
+            )}
+
+            {selectedTab === 'Drivers' && (
+              <DriversManagementPage />
             )}
           </main>
           </ToastProvider>

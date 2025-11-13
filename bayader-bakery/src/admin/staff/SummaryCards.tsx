@@ -5,30 +5,44 @@ interface SummaryCardProps {
   title: string
   value: number
   trend: number[]
+  loading?: boolean
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, trend }) => {
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, trend, loading = false }) => {
   const data = trend.map((val, index) => ({ name: '', value: val }))
+
+  // Determine trend direction
+  const trendUp = trend[trend.length - 1] >= trend[0]
+  const trendDifference = trend[trend.length - 1] - trend[0]
+  const percentChange = trend[0] !== 0 ? Math.round((trendDifference / trend[0]) * 100) : 0
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-gray-600">{title}</h3>
+        {percentChange !== 0 && (
+          <span className={`text-xs font-semibold ${trendUp ? 'text-green-600' : 'text-red-600'}`}>
+            {trendUp ? '↑' : '↓'} {Math.abs(percentChange)}%
+          </span>
+        )}
       </div>
       <div className="flex items-end justify-between">
-        <p className="text-3xl font-bold text-[#5E372E]">{value}</p>
-        <div className="w-20 h-12">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#D97706" 
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <p className="text-3xl font-bold text-[#5E372E]">{loading ? '...' : value}</p>
+        <div className="w-20 h-12 flex-shrink-0">
+          {!loading && trend.length > 0 && (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <LineChart data={data} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#D97706" 
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>

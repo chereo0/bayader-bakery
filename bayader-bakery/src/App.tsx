@@ -20,6 +20,8 @@ import EventsList from './components/EventsList'
 import EventsPublicPage from './components/EventsPublicPage'
 import MyOrdersPage from './components/MyOrdersPage'
 import ProfilePage from './components/ProfilePage'
+import ProtectedRoute from './components/ProtectedRoute'
+import DriverDashboard from './driver/DriverDashboard'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -38,8 +40,21 @@ export default function App(){
       <CartProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
-          <Route path="/staff" element={<StaffDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/driver" element={
+            <ProtectedRoute requiredRoles={['driver']}>
+              <DriverDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/staff" element={
+            <ProtectedRoute staffOnly>
+              <StaffDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute adminOnly>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
           
           <Route path="*" element={
             <PublicLayout>

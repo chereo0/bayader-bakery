@@ -34,6 +34,12 @@ app.use('/api/deliveries', require('./routes/deliveries'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin/drivers', require('./routes/drivers'));
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/inventory-alerts', require('./routes/inventoryAlerts'));
+app.use('/api/production', require('./routes/production'));
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/notifications', require('./routes/notifications'));
 // Inventory routes (wraps product stock operations and inventory queries)
 app.use('/api/inventory', require('./routes/inventory'));
 // Dev-only debug routes (do not mount in production)

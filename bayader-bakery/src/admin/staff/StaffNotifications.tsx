@@ -1,7 +1,18 @@
-import React from 'react'
-import { notifications, Notification } from './data'
+import React, { useState, useEffect } from 'react'
 
-const NotificationItem: React.FC<{ notification: Notification }> = ({ notification }) => {
+const API_BASE_URL = 'http://localhost:5000/api'
+
+interface Notification {
+  _id: string
+  type: 'alert' | 'warning' | 'info'
+  title: string
+  message: string
+  read: boolean
+  createdAt: string
+  readAt?: string
+}
+
+const NotificationItem: React.FC<{ notification: Notification; onMarkRead?: (id: string) => void }> = ({ notification, onMarkRead }) => {
   const getIcon = () => {
     switch (notification.type) {
       case 'alert':
@@ -25,28 +36,140 @@ const NotificationItem: React.FC<{ notification: Notification }> = ({ notificati
     }
   }
 
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
   return (
-    <div className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+    <div
+      className={`flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer ${
+        notification.read ? 'hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'
+      }`}
+      onClick={() => onMarkRead?.(notification._id)}
+    >
       <div className="flex-shrink-0 mt-0.5">
         {getIcon()}
       </div>
       <div className="flex-1">
+        <p className="text-sm font-medium text-gray-800">{notification.title}</p>
         <p className="text-sm text-gray-700">{notification.message}</p>
-        <p className="text-xs text-gray-500 mt-1">{notification.timestamp}</p>
+        <p className="text-xs text-gray-500 mt-1">{formatTime(notification.createdAt)}</p>
       </div>
+      {!notification.read && (
+        <div className="flex-shrink-0">
+          <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+        </div>
+      )}
     </div>
   )
 }
 
 const StaffNotifications: React.FC = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  const token = localStorage.getItem('token')
+
+  useEffect(() => {
+    fetchNotifications()
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      if (!token) {
+        setError('No authentication token found')
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch(`${API_BASE_URL}/notifications?limit=10`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications')
+      }
+
+      const data = await response.json()
+      setNotifications(data.data || [])
+      setUnreadCount(data.pagination?.unread || 0)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        // Update local state
+        setNotifications(prevNotifs =>
+          prevNotifs.map(notif =>
+            notif._id === notificationId
+              ? { ...notif, read: true, readAt: new Date().toISOString() }
+              : notif
+          )
+        )
+        setUnreadCount(Math.max(0, unreadCount - 1))
+      }
+    } catch (err) {
+      console.error('Error marking notification as read:', err)
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
-      <h3 className="text-lg font-semibold text-[#5E372E] mb-4">Staff Notifications</h3>
-      <div className="space-y-1">
-        {notifications.map((notification) => (
-          <NotificationItem key={notification.id} notification={notification} />
-        ))}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-[#5E372E]">Staff Notifications</h3>
+        {unreadCount > 0 && (
+          <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+            {unreadCount}
+          </span>
+        )}
       </div>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+      {loading ? (
+        <div className="text-center py-6 text-gray-500">Loading notifications...</div>
+      ) : (
+        <div className="space-y-1">
+          {notifications.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">No notifications</div>
+          ) : (
+            notifications.map((notification: Notification) => (
+              <NotificationItem
+                key={notification._id}
+                notification={notification}
+                onMarkRead={handleMarkAsRead}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }

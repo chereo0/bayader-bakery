@@ -1,7 +1,34 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+interface SettingsState {
+  profile: {
+    name: string;
+    email: string;
+    phone: string;
+    department: string;
+  };
+  notifications: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+  };
+  preferences: {
+    language: string;
+    theme: string;
+    timezone: string;
+  };
+}
 
 const StaffSettingsPage: React.FC = () => {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<SettingsState>({
+    profile: {
+      name: '',
+      email: '',
+      phone: '',
+      department: 'Production'
+    },
     notifications: {
       email: true,
       push: true,
@@ -11,14 +38,56 @@ const StaffSettingsPage: React.FC = () => {
       language: 'en',
       theme: 'light',
       timezone: 'UTC+3'
-    },
-    profile: {
-      name: 'Staff Member',
-      email: 'staff@bayader.com',
-      phone: '+966 50 123 4567',
-      department: 'Production'
     }
-  })
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Fetch settings on component mount
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/settings/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setSettings(data.data);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch settings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateSetting = (section: string, key: string, value: any) => {
     setSettings(prev => ({
@@ -27,11 +96,121 @@ const StaffSettingsPage: React.FC = () => {
         ...prev[section as keyof typeof prev],
         [key]: value
       }
-    }))
+    }));
+  };
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true);
+      setError('');
+      setSuccess('');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/settings/me`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setSuccess('Settings saved successfully!');
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updatePassword = async () => {
+    try {
+      if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+        setError('All password fields are required');
+        return;
+      }
+
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        setError('New passwords do not match');
+        return;
+      }
+
+      setPasswordLoading(true);
+      setError('');
+      setSuccess('');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/settings/me/password`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update password');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setSuccess('Password updated successfully!');
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <p className="text-gray-500">Loading settings...</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
+      {/* Alert Messages */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700 text-sm">{error}</p>
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-green-700 text-sm">{success}</p>
+        </div>
+      )}
+
       {/* Profile Settings */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-[#5E372E] mb-4">Profile Information</h3>
@@ -170,6 +349,8 @@ const StaffSettingsPage: React.FC = () => {
             <input
               type="password"
               placeholder="Enter current password"
+              value={passwordData.currentPassword}
+              onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
               className="w-full border rounded px-3 py-2"
             />
           </div>
@@ -178,6 +359,8 @@ const StaffSettingsPage: React.FC = () => {
             <input
               type="password"
               placeholder="Enter new password"
+              value={passwordData.newPassword}
+              onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
               className="w-full border rounded px-3 py-2"
             />
           </div>
@@ -186,19 +369,29 @@ const StaffSettingsPage: React.FC = () => {
             <input
               type="password"
               placeholder="Confirm new password"
+              value={passwordData.confirmPassword}
+              onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
               className="w-full border rounded px-3 py-2"
             />
           </div>
-          <button className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors">
-            Update Password
+          <button 
+            onClick={updatePassword}
+            disabled={passwordLoading}
+            className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {passwordLoading ? 'Updating...' : 'Update Password'}
           </button>
         </div>
       </div>
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <button className="px-6 py-3 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors font-medium">
-          Save All Settings
+        <button 
+          onClick={saveSettings}
+          disabled={saving}
+          className="px-6 py-3 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? 'Saving...' : 'Save All Settings'}
         </button>
       </div>
     </div>

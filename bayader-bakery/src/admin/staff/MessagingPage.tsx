@@ -1,66 +1,79 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
-interface Message {
-  id: string
-  from: string
+const API_BASE_URL = 'http://localhost:5000/api';
+
+interface MessageItem {
+  _id: string
+  from: {
+    _id: string
+    name: string
+    email: string
+    role: string
+  }
   subject: string
   message: string
-  timestamp: string
+  timestamp?: string
   read: boolean
   type: 'system' | 'admin' | 'staff'
+  createdAt: string
+}
+
+interface SelectedMessage extends MessageItem {
+  timestamp?: string
 }
 
 const MessagingPage: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      from: 'Admin',
-      subject: 'New Order Priority',
-      message: 'Please prioritize Order #501 for customer Fatima Al',
-      timestamp: '10:30 AM',
-      read: false,
-      type: 'admin'
-    },
-    {
-      id: '2',
-      from: 'System',
-      subject: 'Inventory Alert',
-      message: 'Low stock detected: Almond Flour (8 units remaining)',
-      timestamp: '12:00 PM',
-      read: false,
-      type: 'system'
-    },
-    {
-      id: '3',
-      from: 'Ahmed Hassan',
-      subject: 'Delivery Update',
-      message: 'Order #492 has been delivered successfully',
-      timestamp: '1:15 PM',
-      read: true,
-      type: 'staff'
-    },
-    {
-      id: '4',
-      from: 'Admin',
-      subject: 'Schedule Change',
-      message: 'Production schedule has been updated. Please check your assignments.',
-      timestamp: '2:00 PM',
-      read: true,
-      type: 'admin'
-    }
-  ])
-
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [messages, setMessages] = useState<MessageItem[]>([])
+  const [selectedMessage, setSelectedMessage] = useState<SelectedMessage | null>(null)
   const [composeOpen, setComposeOpen] = useState(false)
   const [newMessage, setNewMessage] = useState({ to: '', subject: '', message: '' })
+  const [staffMembers, setStaffMembers] = useState<Array<{ _id: string; name: string }>>([])
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
 
-  const unreadCount = messages.filter(m => !m.read).length
+  const token = localStorage.getItem('token');
 
-  const markAsRead = (id: string) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m))
-  }
+  // Fetch messages on component mount
+  useEffect(() => {
+    fetchMessages();
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(fetchMessages, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const getMessageIcon = (type: Message['type']) => {
+  const fetchMessages = async () => {
+    try {
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch messages');
+
+      const data = await response.json();
+      if (data.success) {
+        const formattedMessages = data.data.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }));
+        setMessages(formattedMessages);
+        setUnreadCount(data.meta?.unreadCount || 0);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch messages');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMessageIcon = (type: MessageItem['type']) => {
     switch (type) {
       case 'system':
         return (
@@ -84,8 +97,111 @@ const MessagingPage: React.FC = () => {
     }
   }
 
+  const markAsRead = async (messageId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/messages/${messageId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to mark as read');
+
+      await response.json();
+      fetchMessages(); // Refresh messages
+    } catch (err) {
+      console.error('Error marking message as read:', err);
+    }
+  };
+
+  const handleSelectMessage = async (message: MessageItem) => {
+    setSelectedMessage({
+      ...message,
+      timestamp: new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    if (!message.read) {
+      await markAsRead(message._id);
+    }
+  };
+
+  const sendNewMessage = async () => {
+    try {
+      if (!newMessage.to || !newMessage.subject || !newMessage.message) {
+        setError('All fields are required');
+        return;
+      }
+
+      setSending(true);
+      setError('');
+
+      const response = await fetch(`${API_BASE_URL}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          to: newMessage.to,
+          subject: newMessage.subject,
+          message: newMessage.message,
+          type: 'staff'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to send message');
+
+      const data = await response.json();
+      if (data.success) {
+        setSuccess('Message sent successfully!');
+        setComposeOpen(false);
+        setNewMessage({ to: '', subject: '', message: '' });
+        fetchMessages(); // Refresh messages
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete message');
+
+      setSuccess('Message archived');
+      setSelectedMessage(null);
+      fetchMessages();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete message');
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Alert Messages */}
+      {error && (
+        <div className="col-span-full bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700 text-sm">{error}</p>
+        </div>
+      )}
+      {success && (
+        <div className="col-span-full bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-green-700 text-sm">{success}</p>
+        </div>
+      )}
+
       {/* Messages List */}
       <div className="lg:col-span-1 bg-white rounded-lg shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
@@ -102,43 +218,51 @@ const MessagingPage: React.FC = () => {
         >
           + New Message
         </button>
-        <div className="space-y-2 max-h-[600px] overflow-y-auto">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              onClick={() => {
-                setSelectedMessage(message)
-                markAsRead(message.id)
-              }}
-              className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedMessage?.id === message.id
-                  ? 'bg-[#5E372E] text-white'
-                  : message.read
-                  ? 'bg-gray-50 hover:bg-gray-100'
-                  : 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500'
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <div className={`mt-0.5 ${selectedMessage?.id === message.id ? 'text-white' : ''}`}>
-                  {getMessageIcon(message.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className={`font-medium text-sm truncate ${selectedMessage?.id === message.id ? 'text-white' : 'text-gray-900'}`}>
-                      {message.from}
-                    </p>
-                    <span className={`text-xs ${selectedMessage?.id === message.id ? 'text-white/80' : 'text-gray-500'}`}>
-                      {message.timestamp}
-                    </span>
+
+        {loading ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Loading messages...</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            {messages.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">No messages</p>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message._id}
+                  onClick={() => handleSelectMessage(message)}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedMessage?._id === message._id
+                      ? 'bg-[#5E372E] text-white'
+                      : message.read
+                      ? 'bg-gray-50 hover:bg-gray-100'
+                      : 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className={`mt-0.5 ${selectedMessage?._id === message._id ? 'text-white' : ''}`}>
+                      {getMessageIcon(message.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className={`font-medium text-sm truncate ${selectedMessage?._id === message._id ? 'text-white' : 'text-gray-900'}`}>
+                          {message.from.name}
+                        </p>
+                        <span className={`text-xs ${selectedMessage?._id === message._id ? 'text-white/80' : 'text-gray-500'}`}>
+                          {message.timestamp}
+                        </span>
+                      </div>
+                      <p className={`text-sm truncate ${selectedMessage?._id === message._id ? 'text-white/90' : 'text-gray-600'}`}>
+                        {message.subject}
+                      </p>
+                    </div>
                   </div>
-                  <p className={`text-sm truncate ${selectedMessage?.id === message.id ? 'text-white/90' : 'text-gray-600'}`}>
-                    {message.subject}
-                  </p>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Message Detail */}
@@ -149,7 +273,7 @@ const MessagingPage: React.FC = () => {
               <div>
                 <h3 className="text-xl font-semibold text-[#5E372E]">{selectedMessage.subject}</h3>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                  <span>From: {selectedMessage.from}</span>
+                  <span>From: {selectedMessage.from.name}</span>
                   <span>•</span>
                   <span>{selectedMessage.timestamp}</span>
                 </div>
@@ -159,11 +283,24 @@ const MessagingPage: React.FC = () => {
               <p className="text-gray-700 whitespace-pre-wrap">{selectedMessage.message}</p>
             </div>
             <div className="mt-6 flex gap-3">
-              <button className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors">
+              <button 
+                onClick={() => {
+                  setComposeOpen(true);
+                  setNewMessage({
+                    to: selectedMessage.from._id,
+                    subject: `Re: ${selectedMessage.subject}`,
+                    message: ''
+                  });
+                }}
+                className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors"
+              >
                 Reply
               </button>
-              <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
-                Forward
+              <button 
+                onClick={() => deleteMessage(selectedMessage._id)}
+                className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50 transition-colors"
+              >
+                Archive
               </button>
             </div>
           </div>
@@ -185,15 +322,25 @@ const MessagingPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
-                <select
-                  value={newMessage.to}
-                  onChange={e => setNewMessage({ ...newMessage, to: e.target.value })}
+                <input
+                  type="text"
+                  value={newMessage.to ? staffMembers.find(s => s._id === newMessage.to)?.name || newMessage.to : ''}
+                  onChange={e => {
+                    const selected = staffMembers.find(s => s.name === e.target.value);
+                    setNewMessage({ ...newMessage, to: selected?._id || '' });
+                  }}
+                  onFocus={() => {
+                    // Could implement autocomplete here
+                  }}
                   className="w-full border rounded px-3 py-2"
-                >
-                  <option value="">Select recipient</option>
-                  <option value="admin">Admin</option>
-                  <option value="staff">All Staff</option>
-                </select>
+                  placeholder="Search staff member..."
+                  list="staff-list"
+                />
+                <datalist id="staff-list">
+                  {staffMembers.map(staff => (
+                    <option key={staff._id} value={staff.name} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
@@ -220,20 +367,18 @@ const MessagingPage: React.FC = () => {
                 onClick={() => {
                   setComposeOpen(false)
                   setNewMessage({ to: '', subject: '', message: '' })
+                  setError('')
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // Handle send message
-                  setComposeOpen(false)
-                  setNewMessage({ to: '', subject: '', message: '' })
-                }}
-                className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f]"
+                onClick={sendNewMessage}
+                disabled={sending}
+                className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Send
+                {sending ? 'Sending...' : 'Send'}
               </button>
             </div>
           </div>
@@ -244,4 +389,3 @@ const MessagingPage: React.FC = () => {
 }
 
 export default MessagingPage
-

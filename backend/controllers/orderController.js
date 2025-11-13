@@ -154,6 +154,93 @@ const cancelOrder = async (req, res) => {
   res.json({ success: true, data: order });
 };
 
+// Get orders for staff dashboard - organized by status
+const getStaffOrders = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    const logger = require('../utils/logger');
+
+    let filter = {};
+    
+    // Only show orders that staff need to work on
+    if (status && status !== 'all') {
+      filter.status = status;
+    } else {
+      // Default to showing pending, confirmed, and preparing orders
+      filter.status = { $in: ['pending', 'confirmed', 'preparing'] };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const orders = await Order.find(filter)
+      .populate('user', 'name email phone')
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await Order.countDocuments(filter);
+
+    logger.info(`Staff orders fetched: ${orders.length} items with status filter: ${status || 'default'}`);
+
+    res.json({
+      success: true,
+      data: orders,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    const logger = require('../utils/logger');
+    logger.error('Error fetching staff orders', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Get order status counts for staff dashboard
+const getStaffOrderStats = async (req, res) => {
+  try {
+    const stats = await Order.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const statsByStatus = {
+      pending: 0,
+      confirmed: 0,
+      preparing: 0,
+      'out-for-delivery': 0,
+      delivered: 0,
+      cancelled: 0
+    };
+
+    stats.forEach(stat => {
+      if (statsByStatus.hasOwnProperty(stat._id)) {
+        statsByStatus[stat._id] = stat.count;
+      }
+    });
+
+    const logger = require('../utils/logger');
+    logger.info('Staff order statistics calculated', statsByStatus);
+
+    res.json({
+      success: true,
+      data: statsByStatus
+    });
+  } catch (error) {
+    const logger = require('../utils/logger');
+    logger.error('Error fetching order stats', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
@@ -161,4 +248,6 @@ module.exports = {
   getAllOrders,
   updateOrderStatus,
   cancelOrder,
+  getStaffOrders,
+  getStaffOrderStats,
 };

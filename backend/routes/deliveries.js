@@ -8,7 +8,11 @@ const {
   assignDriver,
   updateDeliveryStatus,
   getMyDeliveries,
+  getDrivers,
 } = require('../controllers/deliveryController');
+
+// Admin/Staff: Get drivers list
+router.get('/drivers', auth, requireRole('admin', 'staff'), getDrivers);
 
 // Admin/Staff: Get all deliveries with filters
 router.get('/', auth, requireRole('admin', 'staff'), getAllDeliveries);

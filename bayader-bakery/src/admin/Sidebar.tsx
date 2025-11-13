@@ -52,6 +52,14 @@ const DeliveryIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   </svg>
 )
 
+const DriverIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+    <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M7 14h10c1.1 0 2 .9 2 2v3H5v-3c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M12 21h-7M12 21h7M12 21v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+)
+
 const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
   const { logout } = useAuth()
   const navigate = useNavigate()
@@ -62,6 +70,7 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
     { key: 'Analytics', label: 'Analytics' },
     { key: 'Orders', label: 'Orders' },
     { key: 'Deliveries', label: 'Deliveries' },
+    { key: 'Drivers', label: 'Drivers' },
     { key: 'Users', label: 'Users' },
     { key: 'Events', label: 'Events' },
     { key: 'Inventory', label: 'Inventory' }
@@ -74,6 +83,7 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
       case 'Analytics': return <ChartIcon />
       case 'Orders': return <OrdersIcon />
       case 'Deliveries': return <DeliveryIcon />
+      case 'Drivers': return <DriverIcon />
       case 'Users': return <UserCircleIcon className="h-5 w-5" />
       case 'Events': return <EventsIcon />
       case 'Inventory': return <InventoryIcon />
