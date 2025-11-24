@@ -43,14 +43,6 @@ const OrdersIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   </svg>
 )
 
-const DeliveryIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-    <path d="M5 13v6h14v-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="8" cy="20" r="1.5" stroke="currentColor" strokeWidth="1.2" />
-    <circle cx="16" cy="20" r="1.5" stroke="currentColor" strokeWidth="1.2" />
-    <path d="M13 13V7L5 3H2v10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
 
 const DriverIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -69,7 +61,6 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
     { key: 'Products', label: 'Products' },
     { key: 'Analytics', label: 'Analytics' },
     { key: 'Orders', label: 'Orders' },
-    { key: 'Deliveries', label: 'Deliveries' },
     { key: 'Drivers', label: 'Drivers' },
     { key: 'Users', label: 'Users' },
     { key: 'Events', label: 'Events' },
@@ -82,7 +73,6 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
       case 'Products': return <ShoppingCartIcon className="h-5 w-5" />
       case 'Analytics': return <ChartIcon />
       case 'Orders': return <OrdersIcon />
-      case 'Deliveries': return <DeliveryIcon />
       case 'Drivers': return <DriverIcon />
       case 'Users': return <UserCircleIcon className="h-5 w-5" />
       case 'Events': return <EventsIcon />

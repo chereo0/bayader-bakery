@@ -9,6 +9,7 @@ import InventoryAlertsPage from './InventoryAlertsPage'
 import MessagingPage from './MessagingPage'
 import StaffSettingsPage from './StaffSettingsPage'
 import QuickActions from './QuickActions'
+import OrdersManagementPage from '../orders/OrdersManagementPage'
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -134,10 +135,7 @@ const StaffDashboard: React.FC = () => {
   )
 
   const OrdersContent = () => (
-    <div className="bg-white rounded-lg shadow-sm min-h-[600px] p-6">
-      <h2 className="text-2xl font-semibold text-[#5E372E] mb-6">Orders Management</h2>
-      <CurrentCustomerOrders />
-    </div>
+    <OrdersManagementPage />
   )
 
   const ProductionContent = () => (

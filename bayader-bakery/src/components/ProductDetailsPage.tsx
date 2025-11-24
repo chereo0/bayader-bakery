@@ -14,7 +14,7 @@ const ProductDetailsPage: React.FC = () => {
   }
 
   const handleAddToCart = () => {
-    addItem({ id: product.id, name: product.name, price: product.price, image: product.image })
+    addItem({ id: String(product.id), name: product.name, price: product.price, image: product.image })
     showToast(`${product.name} added to cart!`)
   }
 

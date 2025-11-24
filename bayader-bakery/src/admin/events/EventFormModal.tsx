@@ -27,9 +27,9 @@ const EventFormModal: React.FC<Props> = ({ open, event, onSave, onClose }) => {
       setType(event.title.includes('Wedding') ? 'Wedding' : 'Other')
       setName(event.name)
       setDate(event.date)
-      setTime(event.time)
-      setVenue(event.venue)
-      setPrice(event.price)
+      setTime(event.time ?? '')
+      setVenue(event.venue ?? '')
+      setPrice(event.price ?? '')
       setServices(event.theme?.map((t,i)=>({ id:i+1, name: t, price: 0 })) || [])
     } else {
       setTitle('')
@@ -54,15 +54,11 @@ const EventFormModal: React.FC<Props> = ({ open, event, onSave, onClose }) => {
     const e: EventItem = {
       id: event?.id ?? Date.now(),
       title: title || `${type} - ${name}`,
-      status: 'Active',
       name,
       date,
       time,
       venue,
       price,
-      staffing: [],
-      budgetNotes: [],
-      activities: [],
       theme: services.map(s=>`${s.name} - $${s.price.toFixed(2)}`)
     }
     onSave(e)

@@ -7,9 +7,15 @@ import {
 } from 'recharts'
 
 // placeholder initial state; will be replaced by backend data
-const initialSalesData: { day: string; sales: number }[] = []
+const initialSalesData: { day: string; sales: number }[] = [
+  { day: '01', sales: 0 },
+  { day: '02', sales: 0 },
+  { day: '03', sales: 0 }
+]
 
-const initialTopProducts: { name: string; value: number }[] = []
+const initialTopProducts: { name: string; value: number }[] = [
+  { name: 'No products', value: 0 }
+]
 
 const channels = [
   { name: 'Website', website: 12, social: 8 },
@@ -31,6 +37,7 @@ const AnalyticsDashboard: React.FC = () => {
   const [summary, setSummary] = useState<any>(null)
   const [salesData, setSalesData] = useState(initialSalesData)
   const [topProducts, setTopProducts] = useState(initialTopProducts)
+  const [orderStatusData, setOrderStatusData] = useState(orderStatus)
   const [loading, setLoading] = useState(false)
 
   const { token: bearer } = useAuth()
@@ -48,7 +55,21 @@ const AnalyticsDashboard: React.FC = () => {
         const sRes = await fetch(`${API_URL}/admin/analytics/summary?days=${days}`, { headers })
         if (sRes.ok) {
           const sJson = await sRes.json()
-          if (sJson.success) setSummary(sJson.data)
+          if (sJson.success) {
+            setSummary(sJson.data)
+            
+            // Update order status data based on actual order counts
+            const data = sJson.data
+            const completed = Number(data.deliveredOrders ?? 0) + Number(data.shippedOrders ?? 0)
+            const pending = Number(data.pendingOrders ?? 0) + Number(data.activeOrders ?? 0)
+            const cancelled = Number(data.cancelledOrders ?? 0)
+            
+            setOrderStatusData([
+              { name: 'Completed', value: completed },
+              { name: 'Pending', value: pending },
+              { name: 'Cancelled', value: cancelled }
+            ])
+          }
         }
 
         // top products
@@ -56,7 +77,7 @@ const AnalyticsDashboard: React.FC = () => {
         if (tpRes.ok) {
           const tpJson = await tpRes.json()
           if (tpJson.success && Array.isArray(tpJson.data)) {
-            setTopProducts(tpJson.data.map((p: any) => ({ name: p.name || String(p.productId || 'Unknown'), value: p.qtySold || 0 })))
+            setTopProducts(tpJson.data.map((p: any) => ({ name: p.name || String(p.productId || 'Unknown'), value: Number(p.qtySold ?? 0) })))
           } else {
             setTopProducts([])
           }
@@ -67,7 +88,7 @@ const AnalyticsDashboard: React.FC = () => {
         if (sdRes.ok) {
           const sdJson = await sdRes.json()
           if (sdJson.success && Array.isArray(sdJson.data)) {
-            setSalesData(sdJson.data.map((d: any) => ({ day: (d._id || '').slice(-2), sales: d.totalSales || 0 })))
+            setSalesData(sdJson.data.map((d: any) => ({ day: (d._id || '').slice(-2), sales: Number(d.totalSales ?? 0) })))
           } else {
             setSalesData([])
           }
@@ -103,27 +124,27 @@ const AnalyticsDashboard: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-4 rounded shadow-sm">
             <div className="text-sm text-[#6b4f45]">Total Revenue</div>
-            <div className="text-2xl font-bold text-[#5E372E]">{summary ? `$${Number(summary.totalSales || 0).toFixed(2)}` : (loading ? 'Loading...' : '$0.00')}</div>
+            <div className="text-2xl font-bold text-[#5E372E]">{summary ? `$${Number(summary.totalSales ?? 0).toFixed(2)}` : (loading ? 'Loading...' : '$0.00')}</div>
           </div>
           <div className="bg-white p-4 rounded shadow-sm">
             <div className="text-sm text-[#6b4f45]">Total Orders</div>
-            <div className="text-2xl font-bold text-[#5E372E]">{summary ? (summary.ordersCount || 0) : (loading ? 'Loading...' : 0)}</div>
+            <div className="text-2xl font-bold text-[#5E372E]">{summary ? Number(summary.ordersCount ?? 0) : (loading ? 'Loading...' : 0)}</div>
           </div>
           <div className="bg-white p-4 rounded shadow-sm">
             <div className="text-sm text-[#6b4f45]">New Customers</div>
-            <div className="text-2xl font-bold text-[#5E372E]">{summary ? (summary.totalCustomers || 0) : (loading ? 'Loading...' : 0)}</div>
+            <div className="text-2xl font-bold text-[#5E372E]">{summary ? Number(summary.totalCustomers ?? 0) : (loading ? 'Loading...' : 0)}</div>
           </div>
           <div className="bg-white p-4 rounded shadow-sm">
             <div className="text-sm text-[#6b4f45]">Average Order Value</div>
-            <div className="text-2xl font-bold text-[#5E372E]">{summary ? (summary.ordersCount ? `$${(Number(summary.totalSales || 0) / Number(summary.ordersCount)).toFixed(2)}` : '$0.00') : (loading ? 'Loading...' : '$0.00')}</div>
+            <div className="text-2xl font-bold text-[#5E372E]">{summary ? (Number(summary.ordersCount ?? 0) > 0 ? `$${(Number(summary.totalSales ?? 0) / Number(summary.ordersCount ?? 0)).toFixed(2)}` : '$0.00') : (loading ? 'Loading...' : '$0.00')}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
           <div className="bg-white p-4 rounded shadow-sm w-full">
             <h3 className="text-lg font-medium text-[#5E372E] mb-2">Sales Trend - Last 30 Days</h3>
-            <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ width: '100%', height: 300, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={salesData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" />
@@ -137,8 +158,8 @@ const AnalyticsDashboard: React.FC = () => {
 
           <div className="bg-white p-4 rounded shadow-sm w-full">
             <h3 className="text-lg font-medium text-[#5E372E] mb-2">Top 5 Best-Selling Products</h3>
-            <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ width: '100%', height: 300, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={topProducts} layout="vertical" margin={{ left: 20 }}>
                   <XAxis type="number" />
                   <YAxis dataKey="name" type="category" width={120} />
@@ -151,11 +172,11 @@ const AnalyticsDashboard: React.FC = () => {
 
           <div className="bg-white p-4 rounded shadow-sm w-full">
             <h3 className="text-lg font-medium text-[#5E372E] mb-2">Order Status</h3>
-            <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ width: '100%', height: 300, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={orderStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-                    {orderStatus.map((entry, index) => (
+                  <Pie data={orderStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                    {orderStatusData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -167,8 +188,8 @@ const AnalyticsDashboard: React.FC = () => {
 
           <div className="bg-white p-4 rounded shadow-sm w-full">
             <h3 className="text-lg font-medium text-[#5E372E] mb-2">Customer Acquisition Channel</h3>
-            <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={{ width: '100%', height: 300, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={channels}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />

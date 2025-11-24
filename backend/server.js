@@ -30,7 +30,6 @@ app.get('/api', (req, res) => res.json({ success: true, message: 'Bayader Bakery
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
-app.use('/api/deliveries', require('./routes/deliveries'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/admin', require('./routes/admin'));

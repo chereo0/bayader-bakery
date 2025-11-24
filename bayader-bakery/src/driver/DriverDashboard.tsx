@@ -3,7 +3,6 @@ import DriverSidebar from './DriverSidebar'
 import DriverNavbar from './DriverNavbar'
 import DeliveryDashboard from './DeliveryDashboard'
 import MyDeliveriesPage from './MyDeliveriesPage'
-import RoutePlannerPage from './RoutePlannerPage'
 import MessagesPage from './MessagesPage'
 import SettingsPage from './SettingsPage'
 
@@ -16,8 +15,6 @@ const DriverDashboard: React.FC = () => {
         return <DeliveryDashboard />
       case 'My Deliveries':
         return <MyDeliveriesPage />
-      case 'Route Planner':
-        return <RoutePlannerPage />
       case 'Messages':
         return <MessagesPage />
       case 'Settings':

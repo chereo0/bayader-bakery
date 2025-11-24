@@ -37,7 +37,7 @@ const CustomerTable: React.FC<Props> = ({ customers, onEdit }) => {
                 <td className="py-3">${c.totalValue.toFixed(2)}</td>
                 <td className="py-3">{c.lastOrderDate ?? '-'}</td>
                 <td className="py-3"><StatusBadge status={c.status} /></td>
-                <td className="py-3"><button onClick={()=>onEdit(c.id)} className="bg-[#6b3f2f] text-white px-3 py-1 rounded text-sm">Edit</button></td>
+                <td className="py-3"><button onClick={()=>onEdit(Number(c.id))} className="bg-[#6b3f2f] text-white px-3 py-1 rounded text-sm">Edit</button></td>
               </tr>
             ))}
           </tbody>

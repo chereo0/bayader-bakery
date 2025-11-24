@@ -1,23 +1,94 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Delivery, deliveries as initialDeliveries, summaryStats } from './data'
 import SummaryCard from './SummaryCards'
 import DeliveryTable from './DeliveryTable'
+import deliveryService from './services/deliveryService'
+
+interface BackendDelivery {
+  _id: string
+  deliveryAddress: string
+  status: string
+  order: {
+    _id: string
+    totalAmount: number
+    status: string
+  }
+  driver?: {
+    _id: string
+    name: string
+    email: string
+    phone: string
+  }
+  estimatedDeliveryDate: string
+  actualDeliveryDate?: string
+}
 
 const DeliveryDashboard: React.FC = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>(initialDeliveries)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'pending' | 'on-way' | 'delivered'>('pending')
   const [selectedOrder, setSelectedOrder] = useState<string>('')
   const [updateStatus, setUpdateStatus] = useState<Delivery['status']>('picked')
   const [reportIssueOpen, setReportIssueOpen] = useState(false)
   const [issueReport, setIssueReport] = useState({ orderId: '', description: '', photo: null as File | null })
 
-  const handleStatusChange = (deliveryId: string, newStatus: Delivery['status']) => {
-    setDeliveries(prev => prev.map(d => d.id === deliveryId ? { ...d, status: newStatus } : d))
+  // Fetch deliveries from backend
+  useEffect(() => {
+    const fetchDeliveries = async () => {
+      try {
+        setLoading(true)
+        const data = await deliveryService.getMyDeliveries()
+        
+        // Transform backend data to frontend format
+        const transformed = data.map((d: BackendDelivery, index: number) => ({
+          id: d._id,
+          orderId: `#${1000 + index}`,
+          customerName: 'Customer',
+          address: d.deliveryAddress,
+          status: d.status.toLowerCase() as Delivery['status'],
+          phone: d.driver?.phone,
+          notes: d.order.totalAmount ? `Amount: ${d.order.totalAmount}` : undefined,
+        }))
+        
+        setDeliveries(transformed)
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching deliveries:', err)
+        setError('Failed to load deliveries. Using demo data.')
+        setDeliveries(initialDeliveries)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDeliveries()
+  }, [])
+
+  const handleStatusChange = async (deliveryId: string, newStatus: Delivery['status']) => {
+    try {
+      // Map frontend status to backend status
+      const backendStatusMap: Record<Delivery['status'], any> = {
+        'pending': 'pending',
+        'picked': 'picked',
+        'on-way': 'in-transit',
+        'delivered': 'delivered'
+      }
+      
+      // Update in backend
+      await deliveryService.updateDeliveryStatus(deliveryId, backendStatusMap[newStatus])
+      
+      // Update in frontend
+      setDeliveries(prev => prev.map(d => d.id === deliveryId ? { ...d, status: newStatus } : d))
+    } catch (err) {
+      console.error('Error updating delivery status:', err)
+      alert('Failed to update delivery status')
+    }
   }
 
-  const handleConfirmDelivery = () => {
+  const handleConfirmDelivery = async () => {
     if (selectedOrder) {
-      handleStatusChange(selectedOrder, updateStatus)
+      await handleStatusChange(selectedOrder, updateStatus)
       setSelectedOrder('')
     }
   }
@@ -28,15 +99,30 @@ const DeliveryDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <SummaryCard title="Total Deliveries" value={summaryStats.totalDeliveries} />
-        <SummaryCard title="Awaiting Pickup" value={pendingCount} />
-        <SummaryCard title="Currently Delivering" value={onWayCount} />
-      </div>
+      {/* Loading & Error States */}
+      {loading && (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5E372E]"></div>
+        </div>
+      )}
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
+      {!loading && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <SummaryCard title="Total Deliveries" value={deliveries.length} />
+            <SummaryCard title="Awaiting Pickup" value={pendingCount} />
+            <SummaryCard title="Currently Delivering" value={onWayCount} />
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Delivery Table */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-[#fffaf4] rounded-lg shadow-sm p-6">
@@ -239,6 +325,8 @@ const DeliveryDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

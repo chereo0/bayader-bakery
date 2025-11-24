@@ -7,7 +7,7 @@ interface Order {
   user: { _id: string; name: string; email: string }
   items: Array<{ name: string; quantity: number; price: number }>
   totalAmount: number
-  status: 'pending' | 'confirmed' | 'preparing' | 'out-for-delivery' | 'delivered' | 'cancelled'
+  status: 'pending' | 'active' | 'shipped' | 'delivered'
   deliveryAddress: { city: string; phone: string }
   payment: { method: string; paid: boolean }
   createdAt: string
@@ -23,14 +23,12 @@ const OrdersManagementPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
-  const statuses = ['pending', 'confirmed', 'preparing', 'out-for-delivery', 'delivered', 'cancelled']
+  const statuses = ['pending', 'active', 'shipped', 'delivered']
   const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    preparing: 'bg-purple-100 text-purple-800',
-    'out-for-delivery': 'bg-orange-100 text-orange-800',
+    active: 'bg-blue-100 text-blue-800',
+    shipped: 'bg-orange-100 text-orange-800',
     delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
   }
 
   useEffect(() => {
