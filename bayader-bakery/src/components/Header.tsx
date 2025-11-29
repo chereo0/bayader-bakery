@@ -32,9 +32,14 @@ export default function Header(){
   }
 
   const handleLogout = () => {
-    logout()
-    setProfileOpen(false)
-    navigate('/')
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout()
+      setProfileOpen(false)
+      // Add a small delay to ensure state is updated before navigation
+      setTimeout(() => {
+        navigate('/', { replace: true })
+      }, 100)
+    }
   }
 
   return (

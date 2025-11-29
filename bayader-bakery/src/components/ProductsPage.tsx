@@ -154,23 +154,44 @@ const ProductsPage: React.FC = () => {
       setError(null)
       
       try {
+        // Don't filter by status on initial load - let backend default to Active
+        // This prevents "no products" issue when backend returns empty initially
         const result = await productApi.getProducts({
-          limit: 100,
-          status: 'Active'
+          limit: 1000
+          // Removed status filter - backend defaults to 'Active'
         })
 
+        // DEBUG: Log the full response
+        console.log('🔍 API Response:', result)
+        console.log('Success?', result.success)
+        console.log('Data:', result.data)
+        console.log('Products array:', result.data?.products)
+        console.log('Products length:', result.data?.products?.length)
+
         if (result.success && result.data?.products) {
-          setProducts(result.data.products.map(p => ({
-            ...p,
-            image: p.image || '/images/products.jpg'
-            // Don't set id - use _id directly
-          })))
+          const productsArray = result.data.products
+          console.log(`✅ Loaded ${productsArray.length} products from backend`)
+          
+          if (productsArray.length > 0) {
+            const mappedProducts = productsArray.map(p => ({
+              ...p,
+              image: p.image || '/images/products.jpg'
+              // Don't set id - use _id directly
+            }))
+            console.log('Mapped products:', mappedProducts)
+            setProducts(mappedProducts)
+          } else {
+            console.warn('⚠️ Products array is empty')
+            setProducts(fallbackProducts)
+          }
         } else {
-          console.warn('Using fallback products - Backend not available')
+          // Only use fallback if no products returned or API fails
+          console.warn('❌ No products from backend or API failed, using fallback products')
+          console.warn('Error:', result.error)
           setProducts(fallbackProducts)
         }
       } catch (err) {
-        console.warn('Error fetching products, using fallback:', err)
+        console.warn('❌ Error fetching products, using fallback:', err)
         setProducts(fallbackProducts)
       } finally {
         setLoading(false)
@@ -183,43 +204,65 @@ const ProductsPage: React.FC = () => {
   // Extract unique categories from products
   const dynamicCategories = useMemo(() => {
     const cats = Array.from(new Set(products.map(p => p.category)))
+    console.log('📂 Extracted categories from products:', cats)
     return cats.sort()
   }, [products])
 
   const filteredProducts = useMemo(() => {
+    console.log('🔄 Recalculating filteredProducts with:')
+    console.log('  selectedCategory:', selectedCategory)
+    console.log('  priceFilter:', priceFilter)
+    console.log('  searchTerm:', searchTerm)
+    console.log('  sortBy:', sortBy)
+    console.log('  products.length:', products.length)
+
     let filtered = products
+    console.log('  1. Start with all products:', filtered.length)
 
     // Apply category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(p => p.category === selectedCategory)
+      console.log(`  2. After category filter (${selectedCategory}):`, filtered.length)
     }
 
     // Apply search filter
     if (searchTerm) {
+      const before = filtered.length
       filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.description.toLowerCase().includes(searchTerm.toLowerCase())
       )
+      console.log(`  3. After search filter ("${searchTerm}"):`, filtered.length, `(removed ${before - filtered.length})`)
     }
 
     // Apply price filter
     if (priceFilter === 'low') {
+      const before = filtered.length
       filtered = filtered.filter(p => p.price < 10)
+      console.log(`  4. After price filter (under $10):`, filtered.length, `(removed ${before - filtered.length})`)
     } else if (priceFilter === 'high') {
+      const before = filtered.length
       filtered = filtered.filter(p => p.price >= 10)
+      console.log(`  4. After price filter ($10+):`, filtered.length, `(removed ${before - filtered.length})`)
     }
 
     // Apply sorting
     if (sortBy === 'price-low') {
       filtered.sort((a, b) => a.price - b.price)
+      console.log('  5. Sorted by price (low to high)')
     } else if (sortBy === 'price-high') {
       filtered.sort((a, b) => b.price - a.price)
+      console.log('  5. Sorted by price (high to low)')
     } else if (sortBy === 'name') {
       filtered.sort((a, b) => a.name.localeCompare(b.name))
+      console.log('  5. Sorted by name (A-Z)')
     }
 
+    console.log('✅ Final filtered products:', filtered.length)
+    console.log('📋 Filtered products:', filtered)
+
     return filtered
-  }, [selectedCategory, priceFilter, searchTerm, sortBy])
+  }, [selectedCategory, priceFilter, searchTerm, sortBy, products])
 
   useEffect(() => {
     // Page fade in
@@ -447,7 +490,7 @@ const ProductsPage: React.FC = () => {
         </div>
 
         {/* Loading State */}
-        {loading && (
+        {loading && filteredProducts.length === 0 && (
           <div className="flex items-center justify-center py-16">
             <div className="text-center">
               <div className="inline-block animate-spin">
@@ -469,11 +512,22 @@ const ProductsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Products Grid */}
-        {!loading && (
+        {/* Products Grid - Show if products available OR loading is complete */}
+        {(filteredProducts.length > 0 || !loading) && (
           <>
+            {(() => {
+              console.log('🎨 RENDERING PRODUCTS GRID:', {
+                loading,
+                filteredProductsLength: filteredProducts.length,
+                gridVisible: filteredProducts.length > 0,
+                productsInDOM: productsRef.current.filter(Boolean).length,
+              })
+              return null
+            })()}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product, index) => (
+              {filteredProducts.map((product, index) => {
+                console.log('🏷️ Rendering product:', product.name, 'at index:', index)
+                return (
                 <div
                   key={product._id}
                   ref={(el) => (productsRef.current[index] = el)}
@@ -529,7 +583,8 @@ const ProductsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
 
             {filteredProducts.length === 0 && (

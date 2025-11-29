@@ -43,12 +43,27 @@ const OrdersIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   </svg>
 )
 
+const MaterialsIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+    <rect x="3" y="5" width="18" height="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M8 5V3a1 1 0 011-1h6a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M7 9h10M7 13h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+)
+
 
 const DriverIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
     <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" />
     <path d="M7 14h10c1.1 0 2 .9 2 2v3H5v-3c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M12 21h-7M12 21h7M12 21v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+)
+
+const MessagesIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M6 9h12M6 13h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
   </svg>
 )
 
@@ -59,24 +74,28 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
   const items: Item[] = [
     { key: 'Dashboard', label: 'Dashboard' },
     { key: 'Products', label: 'Products' },
+    { key: 'Materials', label: 'Materials' },
     { key: 'Analytics', label: 'Analytics' },
     { key: 'Orders', label: 'Orders' },
     { key: 'Drivers', label: 'Drivers' },
     { key: 'Users', label: 'Users' },
     { key: 'Events', label: 'Events' },
-    { key: 'Inventory', label: 'Inventory' }
+    { key: 'Inventory', label: 'Inventory' },
+    { key: 'Messages', label: 'Messages' }
   ]
 
   const renderIcon = (key: string) => {
     switch (key) {
       case 'Dashboard': return <WheatIcon className="h-5 w-5" />
       case 'Products': return <ShoppingCartIcon className="h-5 w-5" />
+      case 'Materials': return <MaterialsIcon />
       case 'Analytics': return <ChartIcon />
       case 'Orders': return <OrdersIcon />
       case 'Drivers': return <DriverIcon />
       case 'Users': return <UserCircleIcon className="h-5 w-5" />
       case 'Events': return <EventsIcon />
       case 'Inventory': return <InventoryIcon />
+      case 'Messages': return <MessagesIcon />
       default: return <span className="w-5 h-5" />
     }
   }
@@ -110,7 +129,14 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
 
         <div className="p-4 border-t border-t-[#6f453f]">
           <button
-            onClick={() => { logout(); navigate('/', { replace: true }); }}
+            onClick={() => {
+              if (window.confirm('Are you sure you want to logout?')) {
+                logout()
+                setTimeout(() => {
+                  navigate('/', { replace: true })
+                }, 100)
+              }
+            }}
             className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-[#6b453f]"
           >
             <span className="w-6 h-6 text-[#f3e9e5] flex items-center justify-center">

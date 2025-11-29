@@ -55,24 +55,38 @@ export const productApi = {
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.status) queryParams.append('status', params.status);
 
-      const response = await fetch(
-        `${API_BASE_URL}/products?${queryParams.toString()}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const url = `${API_BASE_URL}/products?${queryParams.toString()}`;
+      console.log('📡 Fetching products from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📊 Response status:', response.status);
+      console.log('📋 Response headers:', {
+        'Content-Type': response.headers.get('Content-Type'),
+        'Content-Length': response.headers.get('Content-Length'),
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('✅ API returned data:', data);
+      console.log('📦 Data structure:', {
+        success: data.success,
+        hasData: !!data.data,
+        hasProducts: !!data.data?.products,
+        productCount: data.data?.products?.length,
+        pagination: data.data?.pagination,
+      });
       return data;
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('❌ Error fetching products:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch products',

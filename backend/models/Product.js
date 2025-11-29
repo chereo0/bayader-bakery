@@ -71,6 +71,20 @@ const productSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    recipe: [
+      {
+        material: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Material',
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: [0, 'Quantity must be positive'],
+        },
+      },
+    ],
     reviews: [reviewSchema],
     relatedProducts: [
       {

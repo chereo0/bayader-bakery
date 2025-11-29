@@ -39,6 +39,8 @@ app.use('/api/inventory-alerts', require('./routes/inventoryAlerts'));
 app.use('/api/production', require('./routes/production'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/notifications', require('./routes/notifications'));
+// Materials management routes (for material-based inventory)
+app.use('/api/materials', require('./routes/materials'));
 // Inventory routes (wraps product stock operations and inventory queries)
 app.use('/api/inventory', require('./routes/inventory'));
 // Dev-only debug routes (do not mount in production)

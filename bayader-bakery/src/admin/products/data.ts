@@ -1,3 +1,8 @@
+export interface RecipeItem {
+  material: string; // Material ID
+  quantity: number;
+}
+
 export interface ProductItem {
   id: string | number
   name: string
@@ -8,6 +13,7 @@ export interface ProductItem {
   stock?: number
   status?: string
   ingredients?: string[]
+  recipe?: RecipeItem[]
   reviews?: Array<{ user: string; comment: string }>
   relatedProducts?: Array<{ id: number; name: string; image?: string }>
 }

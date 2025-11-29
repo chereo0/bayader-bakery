@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const Material = require('../models/Material');
 const { LOW_STOCK_THRESHOLD } = require('../config');
 
 // @desc    Get all products (public)
@@ -34,6 +35,7 @@ const getProducts = async (req, res) => {
     .skip(skip)
     .limit(parseInt(limit))
     .populate('relatedProducts', 'name price image')
+    .populate('recipe.material', 'name unit')
     .lean();
 
   const total = await Product.countDocuments(query);
@@ -58,7 +60,8 @@ const getProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   const product = await Product.findById(req.params.id)
     .populate('relatedProducts', 'name price image')
-    .populate('reviews.user', 'name');
+    .populate('reviews.user', 'name')
+    .populate('recipe.material', 'name unit');
 
   if (!product) {
     return res.status(404).json({
@@ -77,7 +80,23 @@ const getProductById = async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = async (req, res) => {
-  const { name, category, description, price, stock, image, images, ingredients, relatedProducts } = req.body;
+  const { name, category, description, price, stock, image, images, ingredients, relatedProducts, recipe } = req.body;
+
+  // Validate recipe materials if provided
+  if (recipe && recipe.length > 0) {
+    const materialIds = recipe.map(item => item.material);
+    const existingMaterials = await Material.find({ 
+      _id: { $in: materialIds },
+      isActive: true 
+    });
+    
+    if (existingMaterials.length !== materialIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'One or more materials in the recipe do not exist or are inactive',
+      });
+    }
+  }
 
   const product = await Product.create({
     name,
@@ -89,7 +108,11 @@ const createProduct = async (req, res) => {
     images,
     ingredients,
     relatedProducts,
+    recipe: recipe || [],
   });
+
+  // Populate recipe materials for response
+  await product.populate('recipe.material', 'name unit');
 
   res.status(201).json({
     success: true,
@@ -101,7 +124,7 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin
 const updateProduct = async (req, res) => {
-  const { name, category, description, price, stock, status, image, images, ingredients, relatedProducts } = req.body;
+  const { name, category, description, price, stock, status, image, images, ingredients, relatedProducts, recipe } = req.body;
 
   const product = await Product.findById(req.params.id);
 
@@ -110,6 +133,22 @@ const updateProduct = async (req, res) => {
       success: false,
       message: 'Product not found',
     });
+  }
+
+  // Validate recipe materials if provided
+  if (recipe !== undefined && recipe.length > 0) {
+    const materialIds = recipe.map(item => item.material);
+    const existingMaterials = await Material.find({ 
+      _id: { $in: materialIds },
+      isActive: true 
+    });
+    
+    if (existingMaterials.length !== materialIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'One or more materials in the recipe do not exist or are inactive',
+      });
+    }
   }
 
   // Update fields
@@ -123,8 +162,12 @@ const updateProduct = async (req, res) => {
   if (images !== undefined) product.images = images;
   if (ingredients !== undefined) product.ingredients = ingredients;
   if (relatedProducts !== undefined) product.relatedProducts = relatedProducts;
+  if (recipe !== undefined) product.recipe = recipe;
 
   await product.save();
+
+  // Populate recipe materials for response
+  await product.populate('recipe.material', 'name unit');
 
   res.json({
     success: true,

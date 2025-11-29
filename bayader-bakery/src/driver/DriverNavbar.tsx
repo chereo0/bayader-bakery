@@ -1,16 +1,18 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const DriverNavbar: React.FC = () => {
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   const handleLogout = () => {
-    // Clear authentication data from localStorage
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    
-    // Navigate to login page
-    navigate('/')
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout()
+      setTimeout(() => {
+        navigate('/', { replace: true })
+      }, 100)
+    }
   }
 
   return (

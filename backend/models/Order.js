@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema({
   totalAmount: { type: Number, required: true, default: 0, min: 0 },
   status: {
     type: String,
-    enum: ['pending', 'active', 'shipped', 'delivered'],
+    enum: ['pending', 'active', 'shipped', 'delivered', 'cancelled'],
     default: 'pending',
   },
   // Driver assignment and delivery tracking

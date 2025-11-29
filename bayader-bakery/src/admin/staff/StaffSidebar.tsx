@@ -61,9 +61,11 @@ const StaffSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => 
   ]
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    window.location.href = '/'
+    if (window.confirm('Are you sure you want to logout?')) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.href = '/'
+    }
   }
 
   return (

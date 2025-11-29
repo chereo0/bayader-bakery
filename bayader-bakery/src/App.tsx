@@ -14,7 +14,10 @@ import Toast from './components/Toast'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import AdminDashboard from './admin/AdminDashboard'
+import AdminEventCreatePage from './admin/events/AdminEventCreatePage'
+import AdminEventEditPage from './admin/events/AdminEventEditPage'
 import StaffDashboard from './admin/staff/StaffDashboard'
+import StaffLayout from './staff/StaffLayout'
 import ProductDetailsPage from './components/ProductDetailsPage'
 import EventsList from './components/EventsList'
 import EventsPublicPage from './components/EventsPublicPage'
@@ -46,13 +49,28 @@ export default function App(){
             </ProtectedRoute>
           } />
           <Route path="/staff" element={
-            <ProtectedRoute staffOnly>
+            <ProtectedRoute requiredRoles={['staff']}>
+              <StaffLayout />
+            </ProtectedRoute>
+          } />
+          <Route path="/staff-admin" element={
+            <ProtectedRoute adminOnly>
               <StaffDashboard />
             </ProtectedRoute>
           } />
           <Route path="/admin" element={
             <ProtectedRoute adminOnly>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/events/create" element={
+            <ProtectedRoute adminOnly>
+              <AdminEventCreatePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/events/edit/:id" element={
+            <ProtectedRoute adminOnly>
+              <AdminEventEditPage />
             </ProtectedRoute>
           } />
           

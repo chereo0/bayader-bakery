@@ -2,11 +2,57 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 
 // GET /api/messages - List messages for current user (inbox)
+// Supports ?fromRole=admin|staff|driver to filter by sender role
 const listMessages = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 20);
     const filter = { to: req.user.id, isArchived: false };
+
+    // Filter by read status if specified
+    if (req.query.read === 'true') filter.read = true;
+    if (req.query.read === 'false') filter.read = false;
+
+    // Filter by sender role if specified
+    if (req.query.fromRole) {
+      const validRoles = ['admin', 'staff', 'driver', 'customer'];
+      if (validRoles.includes(req.query.fromRole)) {
+        // Get all users with specified role
+        const usersWithRole = await User.find({ role: req.query.fromRole }).select('_id');
+        const userIds = usersWithRole.map(u => u._id);
+        filter.from = { $in: userIds };
+      }
+    }
+
+    const total = await Message.countDocuments(filter);
+    const messages = await Message.find(filter)
+      .populate('from', 'name email role')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.json({
+      success: true,
+      data: messages,
+      meta: { total, page, limit, unreadCount: await Message.countDocuments({ to: req.user.id, read: false, isArchived: false }) }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/messages/conversations - Get all messages (sent or received)
+const getConversations = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    // Show all messages where user is sender OR receiver
+    const filter = {
+      $or: [
+        { to: req.user.id, isArchived: false },
+        { from: req.user.id, isArchived: false }
+      ]
+    };
 
     // Filter by read status if specified
     if (req.query.read === 'true') filter.read = true;
@@ -38,8 +84,8 @@ const getMessage = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
 
-    // Check if user is recipient
-    if (message.to.toString() !== req.user.id) {
+    // Check if user is sender or recipient
+    if (message.to.toString() !== req.user.id && message.from.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -100,8 +146,8 @@ const markAsRead = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
 
-    // Check if user is recipient
-    if (message.to.toString() !== req.user.id) {
+    // Check if user is sender or recipient
+    if (message.to.toString() !== req.user.id && message.from.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -124,8 +170,8 @@ const markAsUnread = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
 
-    // Check if user is recipient
-    if (message.to.toString() !== req.user.id) {
+    // Check if user is sender or recipient
+    if (message.to.toString() !== req.user.id && message.from.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -148,8 +194,8 @@ const deleteMessage = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
 
-    // Check if user is recipient
-    if (message.to.toString() !== req.user.id) {
+    // Check if user is sender or recipient
+    if (message.to.toString() !== req.user.id && message.from.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -179,6 +225,7 @@ const getUnreadCount = async (req, res) => {
 
 module.exports = {
   listMessages,
+  getConversations,
   getMessage,
   sendMessage,
   markAsRead,

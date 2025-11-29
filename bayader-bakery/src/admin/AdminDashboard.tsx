@@ -1,16 +1,19 @@
 import React, { useState } from 'react'
 import Sidebar from './Sidebar'
 import ProductsManagementPage from './products/ProductsManagementPage'
+import MaterialsManagementPage from './materials/MaterialsManagementPageSelfContained';
 import AnalyticsDashboard from './AnalyticsDashboard'
 import UsersManagementPage from './users/UsersManagementPage'
 import InventoryPage from './inventory/InventoryPage'
-import EventsPage from './events/EventsPage'
+import AdminEventsPage from './events/AdminEventsPage'
 import OrdersManagementPage from './orders/OrdersManagementPage'
 import DriversManagementPage from './drivers/DriversManagementPage'
+import MessagingPage from './staff/MessagingPage'
 import DashboardStats from './DashboardStats'
 import SalesChart from './SalesChart'
 import OrdersTable from './OrdersTable'
 import LowStock from './LowStock'
+import LowStockMaterials from './materials/LowStockMaterials'
 import EventRequests from './EventRequests'
 import Feedbacks from './Feedbacks'
 import QuickLinks from './QuickLinks'
@@ -41,6 +44,7 @@ const AdminDashboard: React.FC = () => {
 
                   <div className="space-y-6">
                     <LowStock />
+                    <LowStockMaterials />
                     <EventRequests />
                     <Feedbacks />
                   </div>
@@ -69,6 +73,10 @@ const AdminDashboard: React.FC = () => {
               <ProductsManagementPage />
             )}
 
+            {selectedTab === 'Materials' && (
+              <MaterialsManagementPage />
+            )}
+
             {selectedTab === 'Analytics' && (
               <AnalyticsDashboard />
             )}
@@ -78,7 +86,7 @@ const AdminDashboard: React.FC = () => {
             )}
 
             {selectedTab === 'Events' && (
-              <EventsPage />
+              <AdminEventsPage />
             )}
 
             {selectedTab === 'Users' && (
@@ -91,6 +99,10 @@ const AdminDashboard: React.FC = () => {
 
             {selectedTab === 'Drivers' && (
               <DriversManagementPage />
+            )}
+
+            {selectedTab === 'Messages' && (
+              <MessagingPage />
             )}
           </main>
           </ToastProvider>

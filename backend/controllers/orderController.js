@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const Material = require('../models/Material');
 const logger = require('../utils/logger');
 const { getNextOrderNumber } = require('../utils/orderNumberGenerator');
 
@@ -10,6 +11,90 @@ const validateDeliveryAddress = (address) => {
     throw new Error('Delivery address must include: line1, city, country, phone');
   }
   return true;
+};
+
+// Helper function to calculate and deduct materials for an order
+const deductMaterialsForOrder = async (order, session = null) => {
+  const materialDeductions = new Map();
+
+  // Calculate total material requirements for all order items
+  for (const orderItem of order.items) {
+    const product = await Product.findById(orderItem.product)
+      .populate('recipe.material')
+      .session(session);
+
+    if (!product || !product.recipe || product.recipe.length === 0) {
+      // Skip products without recipes (existing products without material requirements)
+      continue;
+    }
+
+    // Calculate required materials for this order item
+    for (const recipeItem of product.recipe) {
+      const materialId = recipeItem.material._id.toString();
+      const requiredQuantity = recipeItem.quantity * orderItem.quantity;
+
+      if (materialDeductions.has(materialId)) {
+        materialDeductions.set(materialId, {
+          ...materialDeductions.get(materialId),
+          requiredQuantity: materialDeductions.get(materialId).requiredQuantity + requiredQuantity,
+        });
+      } else {
+        materialDeductions.set(materialId, {
+          material: recipeItem.material,
+          requiredQuantity,
+        });
+      }
+    }
+  }
+
+  if (materialDeductions.size === 0) {
+    // No materials to deduct
+    return { success: true, deductions: [] };
+  }
+
+  // Check stock availability for all materials
+  const insufficientMaterials = [];
+  for (const [materialId, deduction] of materialDeductions) {
+    const currentStock = deduction.material.currentStock;
+    if (currentStock < deduction.requiredQuantity) {
+      insufficientMaterials.push({
+        name: deduction.material.name,
+        required: deduction.requiredQuantity,
+        available: currentStock,
+        unit: deduction.material.unit,
+      });
+    }
+  }
+
+  if (insufficientMaterials.length > 0) {
+    return {
+      success: false,
+      error: 'Insufficient materials for this order',
+      insufficientMaterials,
+    };
+  }
+
+  // Deduct materials
+  const deductions = [];
+  for (const [materialId, deduction] of materialDeductions) {
+    const material = await Material.findByIdAndUpdate(
+      materialId,
+      { $inc: { currentStock: -deduction.requiredQuantity } },
+      { new: true, session }
+    );
+
+    deductions.push({
+      materialId,
+      name: deduction.material.name,
+      deductedQuantity: deduction.requiredQuantity,
+      unit: deduction.material.unit,
+      newStock: material.currentStock,
+    });
+
+    logger.info(`Deducted ${deduction.requiredQuantity} ${deduction.material.unit} of ${deduction.material.name} for order ${order._id}. New stock: ${material.currentStock}`);
+  }
+
+  return { success: true, deductions };
 };
 
 // Validate payment info
@@ -256,13 +341,27 @@ const updateOrderStatus = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Validate status transition
-    const validTransitions = {
-      'pending': ['active', 'delivered'],
-      'active': ['shipped', 'delivered'],
-      'shipped': ['delivered'],
-      'delivered': []
-    };
+    // Define valid transitions based on user role
+    let validTransitions;
+    
+    if (req.user.role === 'staff') {
+      // Staff can only move forward in the bakery workflow
+      // pending → active → shipped → delivered
+      validTransitions = {
+        'pending': ['active'],
+        'active': ['shipped'],
+        'shipped': ['delivered'],
+        'delivered': []
+      };
+    } else {
+      // Admin/Driver have full control (existing behavior)
+      validTransitions = {
+        'pending': ['active', 'delivered'],
+        'active': ['shipped', 'delivered'],
+        'shipped': ['delivered'],
+        'delivered': []
+      };
+    }
 
     if (!validTransitions[order.status]) {
       return res.status(400).json({ 
@@ -279,16 +378,59 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     const prevStatus = order.status;
-    order.status = status;
-    await order.save();
+    
+    // Handle material deduction when order becomes active
+    let materialDeductionResult = null;
+    if (status === 'active' && prevStatus !== 'active') {
+      const session = await Order.startSession();
+      try {
+        await session.withTransaction(async () => {
+          materialDeductionResult = await deductMaterialsForOrder(order, session);
+          
+          if (!materialDeductionResult.success) {
+            throw new Error(JSON.stringify(materialDeductionResult));
+          }
+
+          order.status = status;
+          await order.save({ session });
+        });
+      } catch (error) {
+        await session.endSession();
+        
+        // If it's a material shortage error, return specific error
+        if (error.message.startsWith('{')) {
+          const errorData = JSON.parse(error.message);
+          return res.status(400).json({
+            success: false,
+            message: errorData.error,
+            insufficientMaterials: errorData.insufficientMaterials,
+          });
+        }
+        
+        throw error;
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      // Normal status update without material deduction
+      order.status = status;
+      await order.save();
+    }
 
     logger.info(`Order ${id} status updated from ${prevStatus} to ${status}`);
 
-    res.json({ 
+    const response = { 
       success: true, 
       data: order,
-      message: `Status updated from ${prevStatus} to ${status}` 
-    });
+      message: `Status updated from ${prevStatus} to ${status}`
+    };
+
+    // Include material deduction info in response
+    if (materialDeductionResult && materialDeductionResult.deductions) {
+      response.materialDeductions = materialDeductionResult.deductions;
+    }
+
+    res.json(response);
   } catch (error) {
     logger.error('Error updating order status', error);
     next(error);
@@ -320,7 +462,7 @@ const cancelOrder = async (req, res, next) => {
     }
 
     // Check if order can be cancelled
-    const cancellableStatuses = ['pending', 'confirmed'];
+    const cancellableStatuses = ['pending', 'active'];
     if (!cancellableStatuses.includes(order.status)) {
       return res.status(400).json({ 
         success: false, 

@@ -2,8 +2,11 @@ const express = require('express')
 const router = express.Router()
 const auth = require('../middleware/auth')
 const requireRole = require('../middleware/requireRole')
-const { listEvents, getEvent, createEvent, updateEvent, deleteEvent } = require('../controllers/eventController')
+const { getPublicEvents, listEvents, getEvent, createEvent, updateEvent, deleteEvent } = require('../controllers/eventController')
 const { createSchema, updateSchema, validate } = require('../validators/eventValidation')
+
+// Public route - no auth required
+router.get('/public', getPublicEvents)
 
 // Protected admin routes for events management
 router.get('/', auth, requireRole('admin'), listEvents)

@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const {
   listMessages,
+  getConversations,
   getMessage,
   sendMessage,
   markAsRead,
@@ -14,7 +15,10 @@ const {
 // All message routes require authentication
 router.use(auth);
 
-// GET messages (inbox)
+// GET conversations (all messages where user is sender or receiver)
+router.get('/conversations/all', getConversations);
+
+// GET messages (inbox only - messages TO user)
 router.get('/', listMessages);
 
 // GET unread count

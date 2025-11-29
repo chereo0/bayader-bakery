@@ -33,6 +33,7 @@ const MessagingPage: React.FC = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [roleFilter, setRoleFilter] = useState<'all' | 'staff' | 'driver'>('all')
 
   const token = localStorage.getItem('token');
 
@@ -42,13 +43,18 @@ const MessagingPage: React.FC = () => {
     // Auto-refresh every 10 seconds
     const interval = setInterval(fetchMessages, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [roleFilter]);
 
   const fetchMessages = async () => {
     try {
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/messages`, {
+      let url = `${API_BASE_URL}/messages/conversations/all`;
+      if (roleFilter !== 'all') {
+        url += `?fromRole=${roleFilter}`;
+      }
+
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -211,6 +217,40 @@ const MessagingPage: React.FC = () => {
               {unreadCount}
             </span>
           )}
+        </div>
+
+        {/* Role Filter Tabs */}
+        <div className="flex gap-2 mb-4 border-b">
+          <button
+            onClick={() => setRoleFilter('all')}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              roleFilter === 'all'
+                ? 'text-[#5E372E] border-b-2 border-[#c79a63]'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setRoleFilter('staff')}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              roleFilter === 'staff'
+                ? 'text-[#5E372E] border-b-2 border-[#c79a63]'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Staff
+          </button>
+          <button
+            onClick={() => setRoleFilter('driver')}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              roleFilter === 'driver'
+                ? 'text-[#5E372E] border-b-2 border-[#c79a63]'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Drivers
+          </button>
         </div>
         <button
           onClick={() => setComposeOpen(true)}
