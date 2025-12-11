@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { Toaster, toast } from 'react-hot-toast'
+import AssignDriverModal from '../components/AssignDriverModal'
+import ReportProblemModal from '../components/ReportProblemModal'
 
 interface OrderItem {
   _id: string
@@ -11,6 +14,26 @@ interface OrderItem {
     city: string
     line1: string
   }
+  user?: {
+    _id: string
+    name: string
+    email: string
+    phone?: string
+  }
+  assignedDriver?: {
+    _id: string
+    name: string
+    phone?: string
+  }
+  notes?: Array<{
+    _id: string
+    addedBy: {
+      name: string
+      role: string
+    }
+    content: string
+    createdAt: string
+  }>
   createdAt: string
 }
 
@@ -48,6 +71,14 @@ const StaffOrdersPage: React.FC = () => {
     currentStatus: null,
     nextStatus: null
   })
+  const [assignDriverModal, setAssignDriverModal] = useState<{
+    isOpen: boolean
+    order: OrderItem | null
+  }>({ isOpen: false, order: null })
+  const [reportProblemModal, setReportProblemModal] = useState<{
+    isOpen: boolean
+    order: OrderItem | null
+  }>({ isOpen: false, order: null })
 
   useEffect(() => {
     fetchOrders()
@@ -301,41 +332,71 @@ const StaffOrdersPage: React.FC = () => {
                       const isUpdating = updatingOrderId === order._id
                       
                       return (
-                        <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                          <td className="px-6 py-4 text-sm font-medium text-[#5E372E] dark:text-[#d4a574]">
-                            #{order.orderNumber}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                            {order.items?.length || 0} item(s)
-                          </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-[#5E372E] dark:text-[#d4a574]">
-                            {order.totalAmount?.toFixed(2)} SAR
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                            {order.deliveryAddress?.city || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                            {formatDate(order.createdAt)}
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            {nextStatus ? (
-                              <button
-                                onClick={() => openConfirmDialog(order)}
-                                disabled={isUpdating}
-                                className="px-3 py-2 bg-[#c79a63] text-white rounded-lg hover:bg-[#b8885a] dark:bg-[#a0794a] dark:hover:bg-[#8f6a3b] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-                              >
-                                {isUpdating ? '⏳ Updating...' : getButtonLabel(order.status)}
-                              </button>
-                            ) : (
-                              <span className="text-gray-500 dark:text-gray-400 text-sm">✓ Complete</span>
-                            )}
-                          </td>
-                        </tr>
+                        <React.Fragment key={order._id}>
+                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <td className="px-6 py-4 text-sm font-medium text-[#5E372E] dark:text-[#d4a574]">
+                              #{order.orderNumber}
+                              {order.user && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {order.user.name}
+                                  {order.user.phone && <span className="ml-2">📞 {order.user.phone}</span>}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </span>
+                              {order.assignedDriver && (
+                                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                  🚗 {order.assignedDriver.name}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                              {order.items?.length || 0} item(s)
+                            </td>
+                            <td className="px-6 py-4 text-sm font-semibold text-[#5E372E] dark:text-[#d4a574]">
+                              {order.totalAmount?.toFixed(2)} SAR
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                              {order.deliveryAddress?.city || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                              {formatDate(order.createdAt)}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <div className="flex flex-col gap-2">
+                                {nextStatus && (
+                                  <button
+                                    onClick={() => openConfirmDialog(order)}
+                                    disabled={isUpdating}
+                                    className="px-3 py-2 bg-[#c79a63] text-white rounded-lg hover:bg-[#b8885a] dark:bg-[#a0794a] dark:hover:bg-[#8f6a3b] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors text-xs"
+                                  >
+                                    {isUpdating ? '⏳ Updating...' : getButtonLabel(order.status)}
+                                  </button>
+                                )}
+                                {order.status === 'shipped' && !order.assignedDriver && (
+                                  <button
+                                    onClick={() => setAssignDriverModal({ isOpen: true, order })}
+                                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
+                                  >
+                                    🚗 Assign Driver
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setReportProblemModal({ isOpen: true, order })}
+                                  className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs font-medium"
+                                >
+                                  ⚠️ Report Issue
+                                </button>
+                                {!nextStatus && (
+                                  <span className="text-gray-500 dark:text-gray-400 text-xs text-center">✓ Complete</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       )
                     })}
                   </tbody>
@@ -399,6 +460,33 @@ const StaffOrdersPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Assign Driver Modal */}
+      {assignDriverModal.order && (
+        <AssignDriverModal
+          isOpen={assignDriverModal.isOpen}
+          onClose={() => setAssignDriverModal({ isOpen: false, order: null })}
+          order={assignDriverModal.order}
+          onAssignSuccess={() => {
+            fetchOrders()
+          }}
+        />
+      )}
+
+      {/* Report Problem Modal */}
+      {reportProblemModal.order && (
+        <ReportProblemModal
+          isOpen={reportProblemModal.isOpen}
+          onClose={() => setReportProblemModal({ isOpen: false, order: null })}
+          order={reportProblemModal.order}
+          onReportSuccess={() => {
+            fetchOrders()
+          }}
+        />
+      )}
+
+      {/* Toast Notifications */}
+      <Toaster position="top-right" />
     </div>
   )
 }

@@ -179,6 +179,52 @@ exports.getDriver = async (req, res) => {
   }
 };
 
+// @route   GET /api/admin/drivers/available
+// @desc    Get available drivers with busy status
+// @access  Private (Admin/Staff)
+exports.getAvailableDrivers = async (req, res) => {
+  try {
+    const Order = require('../models/Order');
+    
+    // Get all drivers with driver role
+    const drivers = await User.find({ role: 'driver' })
+      .select('name email phone')
+      .lean();
+    
+    // Find orders that are currently assigned (shipped but not delivered)
+    const activeOrders = await Order.find({
+      status: { $in: ['shipped'] },
+      deliveryStatus: { $in: ['assigned', 'in-transit'] },
+      assignedDriver: { $exists: true, $ne: null }
+    }).select('assignedDriver');
+    
+    // Create a set of busy driver IDs
+    const busyDriverIds = new Set(
+      activeOrders.map(o => o.assignedDriver?.toString()).filter(Boolean)
+    );
+    
+    // Add isBusy status to each driver
+    const availableDrivers = drivers.map(driver => ({
+      _id: driver._id,
+      name: driver.name,
+      email: driver.email,
+      phone: driver.phone,
+      isBusy: busyDriverIds.has(driver._id.toString())
+    }));
+    
+    res.json({ 
+      success: true, 
+      data: availableDrivers 
+    });
+  } catch (error) {
+    console.error('Get available drivers error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Server error fetching available drivers'
+    });
+  }
+};
+
 // @route   PUT /api/admin/drivers/:id
 // @desc    Update driver information
 // @access  Private (Admin/Staff)

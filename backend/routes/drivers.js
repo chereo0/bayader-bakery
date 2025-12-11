@@ -8,7 +8,8 @@ const {
   getDriver,
   updateDriver,
   deleteDriver,
-  resetDriverPassword
+  resetDriverPassword,
+  getAvailableDrivers
 } = require('../controllers/driverController');
 
 // All driver routes require authentication
@@ -17,6 +18,9 @@ const {
 
 // Create new driver (Admin only)
 router.post('/', auth, requireRole('admin'), createDriver);
+
+// Get available drivers with busy status (Admin/Staff)
+router.get('/available', auth, requireRole('admin', 'staff'), getAvailableDrivers);
 
 // Get all drivers (Admin/Staff)
 router.get('/', auth, requireRole('admin', 'staff'), getAllDrivers);

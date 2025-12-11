@@ -14,6 +14,7 @@ const {
   getDriverOrders,
   updateDeliveryStatus,
   assignOrderToDriver,
+  addOrderNote,
 } = require('../controllers/orderController');
 
 // Customer: create order
@@ -45,6 +46,9 @@ router.patch('/:id/delivery-status', auth, requireRole('driver'), updateDelivery
 
 // Admin/Staff: assign order to driver
 router.patch('/:id/assign-driver', auth, requireRole('admin', 'staff'), assignOrderToDriver);
+
+// Admin/Staff: add note to order
+router.post('/:id/notes', auth, requireRole('admin', 'staff'), addOrderNote);
 
 // Customer: cancel order
 router.patch('/:id/cancel', auth, cancelOrder);

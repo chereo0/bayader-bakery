@@ -53,6 +53,23 @@ const orderSchema = new mongoose.Schema({
     paid: { type: Boolean, default: false },
     transactionId: { type: String },
   },
+  // Order notes/comments for staff and admin
+  notes: [{
+    addedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    content: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 }, {
   timestamps: true,
 });

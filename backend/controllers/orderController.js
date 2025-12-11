@@ -315,7 +315,8 @@ const getAllOrders = async (req, res, next) => {
       .sort('-createdAt')
       .skip(skip)
       .limit(limitNum)
-      .populate('user', 'name email')
+      .populate('user', 'name email phone')
+      .populate('assignedDriver', 'name email phone')
       .lean();
     
     const total = await Order.countDocuments(filter);
@@ -819,6 +820,58 @@ const assignOrderToDriver = async (req, res, next) => {
   }
 };
 
+// Admin/Staff: Add note to order
+const addOrderNote = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: 'Invalid order ID format' });
+    }
+    
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'Note content is required' });
+    }
+    
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found' 
+      });
+    }
+    
+    // Initialize notes array if it doesn't exist
+    if (!order.notes) {
+      order.notes = [];
+    }
+    
+    // Add new note
+    order.notes.push({
+      addedBy: req.user.userId,
+      content: content.trim(),
+      createdAt: new Date()
+    });
+    
+    await order.save();
+    
+    // Populate the newly added note's user info
+    await order.populate('notes.addedBy', 'name email role');
+    
+    logger.info(`Note added to order ${id} by user ${req.user.userId}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Note added successfully',
+      data: order 
+    });
+  } catch (error) {
+    logger.error('Error adding order note', error);
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
@@ -831,4 +884,5 @@ module.exports = {
   getDriverOrders,
   updateDeliveryStatus,
   assignOrderToDriver,
+  addOrderNote,
 };

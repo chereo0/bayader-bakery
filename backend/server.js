@@ -37,6 +37,7 @@ app.use('/api/custom-orders', require('./routes/customOrderRoutes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/drivers', require('./routes/drivers'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/order-issues', require('./routes/orderIssues'));
 app.use('/api/inventory-alerts', require('./routes/inventoryAlerts'));
 app.use('/api/production', require('./routes/production'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -45,10 +46,6 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/materials', require('./routes/materials'));
 // Inventory routes (wraps product stock operations and inventory queries)
 app.use('/api/inventory', require('./routes/inventory'));
-// Dev-only debug routes (do not mount in production)
-if (config.NODE_ENV === 'development') {
-  app.use('/api/debug', require('./routes/debug'));
-}
 
 // CRITICAL SAFETY CHECK: Prevent /api/* from ever returning HTML
 app.use('/api', (req, res) => {
