@@ -197,6 +197,8 @@ const AdminEventCreatePage: React.FC = () => {
           <input
             type="datetime-local"
             name="startDate"
+            title="Start Date"
+            placeholder="Select start date and time"
             value={formData.startDate}
             onChange={handleChange}
             className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c79a63] ${
@@ -212,6 +214,8 @@ const AdminEventCreatePage: React.FC = () => {
           <input
             type="datetime-local"
             name="endDate"
+            title="End Date"
+            placeholder="Select end date and time"
             value={formData.endDate}
             onChange={handleChange}
             className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c79a63] ${
@@ -245,9 +249,10 @@ const AdminEventCreatePage: React.FC = () => {
             <input
               type="number"
               name="perPersonPrice"
+              title="Price Per Person"
+              placeholder="0.00"
               value={formData.perPersonPrice}
               onChange={handleChange}
-              placeholder="0.00"
               step="0.01"
               min="0"
               className={`w-full pl-8 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c79a63] ${
@@ -290,6 +295,7 @@ const AdminEventCreatePage: React.FC = () => {
         <div className="flex items-center">
           <input
             type="checkbox"
+            title="Active Status"
             name="isActive"
             checked={formData.isActive}
             onChange={handleChange}

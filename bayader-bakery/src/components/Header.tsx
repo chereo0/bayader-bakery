@@ -1,18 +1,147 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { WheatIcon } from './ui/Icon'
 import Button from './ui/Button'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { ShoppingCartIcon } from './ui/Icon'
+import { Bell } from 'lucide-react'
 
 export default function Header(){
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const { items } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Fetch unread notifications count
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchUnreadCount()
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [isAuthenticated, user])
+
+  const fetchUnreadCount = async () => {
+    console.group('[Notifications] Fetching unread count...')
+    try {
+      // Step 1: Validate token
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.warn('[Notifications] ⚠️ No auth token in localStorage')
+        setUnreadCount(0)
+        console.groupEnd()
+        return
+      }
+      console.log('[Notifications] ✓ Token found:', token.substring(0, 20) + '...')
+
+      // Step 2: Make request with explicit headers
+      console.log('[Notifications] 📡 Fetching /api/notifications/me...')
+      const response = await fetch('/api/notifications/me', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+      })
+
+      // Step 3: Log response status
+      console.log(`[Notifications] 📊 Response status: ${response.status} ${response.statusText}`)
+
+      // Step 4: Check if response was successful
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`[Notifications] ❌ HTTP ${response.status}`, {
+          statusText: response.statusText,
+          preview: errorText.substring(0, 500)
+        })
+        setUnreadCount(0)
+        console.groupEnd()
+        return
+      }
+
+      // Step 5: Validate content-type header before parsing
+      const contentType = response.headers.get('content-type')
+      console.log(`[Notifications] 📋 Content-Type: ${contentType}`)
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[Notifications] ❌ Invalid content-type', {
+          expected: 'application/json',
+          received: contentType,
+          message: 'Backend returned non-JSON response'
+        })
+        setUnreadCount(0)
+        console.groupEnd()
+        return
+      }
+
+      // Step 6: Parse JSON safely
+      console.log('[Notifications] 🔍 Parsing JSON response...')
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error('[Notifications] ❌ JSON.parse() failed', {
+          error: parseError.message,
+          preview: await response.text().then(t => t.substring(0, 200))
+        })
+        setUnreadCount(0)
+        console.groupEnd()
+        return
+      }
+
+      // Step 7: Validate response structure
+      console.log('[Notifications] ✓ JSON parsed successfully', data)
+      
+      if (!data.success) {
+        console.warn('[Notifications] ⚠️ Response success flag is false', data)
+        setUnreadCount(0)
+        console.groupEnd()
+        return
+      }
+
+      if (!Array.isArray(data.data)) {
+        console.error('[Notifications] ❌ Response data is not an array', {
+          actual: typeof data.data,
+          value: data.data
+        })
+        setUnreadCount(0)
+        console.groupEnd()
+        return
+      }
+
+      // Step 8: Calculate unread count
+      const unreadCount = data.data.filter((n: any) => !n.read).length || 0
+      setUnreadCount(unreadCount)
+      console.log(`[Notifications] ✅ Success! Total: ${data.data.length}, Unread: ${unreadCount}`, {
+        notifications: data.data
+      })
+    } catch (error) {
+      // Step 9: Catch unexpected errors
+      if (error instanceof SyntaxError) {
+        console.error('[Notifications] ❌ Syntax Error (likely JSON parsing)', {
+          message: error.message,
+          stack: error.stack
+        })
+      } else if (error instanceof TypeError) {
+        console.error('[Notifications] ❌ Network Error', {
+          message: error.message,
+          stack: error.stack
+        })
+      } else {
+        console.error('[Notifications] ❌ Unexpected Error', error)
+      }
+      setUnreadCount(0)
+    } finally {
+      console.groupEnd()
+    }
+  }
 
   const scrollToSection = (sectionId: string) => {
     if (location.pathname !== '/') {
@@ -69,6 +198,16 @@ export default function Header(){
                 </span>
               )}
             </Link>
+            {isAuthenticated && user && (
+              <Link to="/notifications" className="relative">
+                <Bell className="h-6 w-6 text-bakery-900" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+            )}
             <div className="hidden md:flex items-center gap-3">
               {isAuthenticated && user ? (
                 <div className="relative">
@@ -84,11 +223,25 @@ export default function Header(){
                   {profileOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-bakery-200">
                       <Link
+                        to="/notifications"
+                        onClick={() => setProfileOpen(false)}
+                        className="block px-4 py-2 text-sm text-bakery-900 hover:bg-bakery-100"
+                      >
+                        Notifications {unreadCount > 0 && `(${unreadCount})`}
+                      </Link>
+                      <Link
                         to="/orders"
                         onClick={() => setProfileOpen(false)}
                         className="block px-4 py-2 text-sm text-bakery-900 hover:bg-bakery-100"
                       >
                         My Orders
+                      </Link>
+                      <Link
+                        to="/my-custom-orders"
+                        onClick={() => setProfileOpen(false)}
+                        className="block px-4 py-2 text-sm text-bakery-900 hover:bg-bakery-100"
+                      >
+                        Custom Orders
                       </Link>
                       <Link
                         to="/profile"
@@ -136,7 +289,9 @@ export default function Header(){
                   <div className="px-3 py-2 text-sm text-bakery-900">
                     Welcome, <strong>{user.name.split(' ')[0]}</strong>
                   </div>
+                  <Link to="/notifications" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Notifications {unreadCount > 0 && `(${unreadCount})`}</Link>
                   <Link to="/orders" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">My Orders</Link>
+                  <Link to="/my-custom-orders" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">Custom Orders</Link>
                   <Link to="/profile" onClick={()=> setOpen(false)} className="block px-3 py-2 rounded-md text-bakery-900 hover:bg-bakery-200">My Profile</Link>
                   <button 
                     onClick={() => { handleLogout(); setOpen(false); }} 

@@ -54,8 +54,8 @@ const StaffLayoutSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect 
   ]
 
   return (
-    <aside className="w-64 bg-[#5E372E] text-white min-h-screen hidden md:block">
-      <div className="p-6 border-b border-b-[#6f453f]">
+    <aside className="w-64 bg-[#5E372E] dark:bg-gray-800 text-white min-h-screen hidden md:block">
+      <div className="p-6 border-b border-b-[#6f453f] dark:border-b-gray-700">
         <h2 className="font-display text-xl">Staff Menu</h2>
       </div>
 
@@ -67,8 +67,8 @@ const StaffLayoutSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect 
                 onClick={() => onSelect && onSelect(item.key)}
                 className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
                   selected === item.key
-                    ? 'bg-gradient-to-r from-[#c79a63] to-[#d4ac6f] text-[#5E372E]'
-                    : 'hover:bg-[#6b453f] text-[#f3e9e5]'
+                    ? 'bg-gradient-to-r from-[#c79a63] to-[#d4ac6f] text-[#5E372E] dark:from-[#a0794a] dark:to-[#8f6a3b] dark:text-white'
+                    : 'hover:bg-[#6b453f] dark:hover:bg-gray-700 text-[#f3e9e5] dark:text-gray-300'
                 }`}
               >
                 <span className="w-6 h-6 flex items-center justify-center">

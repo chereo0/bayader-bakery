@@ -430,6 +430,7 @@ const ProductsPage: React.FC = () => {
                 Price Range
               </label>
               <select
+                title="Filter by Price Range"
                 value={priceFilter}
                 onChange={(e) => setPriceFilter(e.target.value)}
                 className="w-full rounded-lg border border-bakery-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-bakery-700 bg-white"
@@ -445,6 +446,7 @@ const ProductsPage: React.FC = () => {
                 Sort By
               </label>
               <select
+                title="Sort Products"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="w-full rounded-lg border border-bakery-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-bakery-700 bg-white"

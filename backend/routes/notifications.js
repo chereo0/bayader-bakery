@@ -3,28 +3,65 @@ const router = express.Router();
 const notificationController = require('../controllers/notificationController');
 const auth = require('../middleware/auth');
 
-// All notification routes require authentication
+// CRITICAL: Cache control FIRST to prevent 304 responses
+router.use((req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟡 Incoming request:', { method: req.method, path: req.path, url: req.url });
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
+// CRITICAL: Authentication middleware SECOND (after cache control)
 router.use(auth);
 
-// Get notifications for current user
-router.get('/', notificationController.getNotifications);
+// CRITICAL: Most specific routes FIRST, general routes LAST
+// Get unread count (MUST come before /me route to avoid matching issues)
+router.get('/unread-count', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to getUnreadCount');
+  next();
+}, notificationController.getUnreadCount);
 
-// Get unread count
-router.get('/unread-count', notificationController.getUnreadCount);
+// Get notifications by category (MUST come before /:id routes)
+router.get('/by-category', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to getNotificationsByCategory');
+  next();
+}, notificationController.getNotificationsByCategory);
 
-// Get notifications by category
-router.get('/by-category', notificationController.getNotificationsByCategory);
+// Get notifications for current user (MUST come after specific routes)
+router.get('/me', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to getNotifications via /me');
+  next();
+}, notificationController.getNotifications);
 
-// Mark notification as read
-router.put('/:id/read', notificationController.markAsRead);
+// Alias for /me
+router.get('/', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to getNotifications via /');
+  next();
+}, notificationController.getNotifications);
 
-// Mark all as read
-router.put('/mark-all/read', notificationController.markAllAsRead);
+// Mark notification as read (parameterized route, MUST come after GET routes)
+router.put('/:id/read', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to markAsRead');
+  next();
+}, notificationController.markAsRead);
 
-// Delete notification
-router.delete('/:id', notificationController.deleteNotification);
+// Mark all as read (MUST have explicit /mark-all/ path to avoid :id matching)
+router.put('/mark-all/read', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to markAllAsRead');
+  next();
+}, notificationController.markAllAsRead);
+
+// Delete notification (parameterized route, MUST come after specific routes)
+router.delete('/:id', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to deleteNotification');
+  next();
+}, notificationController.deleteNotification);
 
 // Create notification (admin/system only)
-router.post('/', auth, notificationController.createNotification);
+router.post('/', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to createNotification');
+  next();
+}, notificationController.createNotification);
 
 module.exports = router;

@@ -25,6 +25,10 @@ import MyOrdersPage from './components/MyOrdersPage'
 import ProfilePage from './components/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute'
 import DriverDashboard from './driver/DriverDashboard'
+import NotificationsPage from './components/NotificationsPage'
+import CustomOrderFormPage from './components/CustomOrderFormPage'
+import MyCustomOrdersPage from './components/MyCustomOrdersPage'
+import AdminCustomOrdersPage from './components/AdminCustomOrdersPage'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -109,6 +113,14 @@ export default function App(){
                 <Route path="/product/:id" element={<ProductDetailsPage />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/orders" element={<MyOrdersPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/custom-order" element={<CustomOrderFormPage />} />
+                <Route path="/my-custom-orders" element={<MyCustomOrdersPage />} />
+                <Route path="/admin-custom-orders" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminCustomOrdersPage />
+                  </ProtectedRoute>
+                } />
               </Routes>
             </PublicLayout>
           } />

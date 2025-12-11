@@ -8,22 +8,37 @@ interface StatsCard {
   icon: React.ReactNode
 }
 
+interface Notification {
+  _id: string
+  title: string
+  message: string
+  type: string
+  category?: string
+  createdAt: string
+  priority?: 'low' | 'normal' | 'high'
+}
+
+interface StaffOverviewProps {
+  onSelectTab?: (tabName: string) => void
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const getToken = () => localStorage.getItem('token')
 
-const StaffOverview: React.FC = () => {
+const StaffOverview: React.FC<StaffOverviewProps> = ({ onSelectTab }) => {
   const [stats, setStats] = useState<any>(null)
+  const [reminders, setReminders] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchStats()
+    fetchReminders()
   }, [])
 
   const fetchStats = async () => {
     try {
-      setLoading(true)
       const token = getToken()
       if (!token) {
         setError('Not authenticated')
@@ -42,10 +57,69 @@ const StaffOverview: React.FC = () => {
         setError(null)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load statistics')
       console.error('Error fetching stats:', err)
+    }
+  }
+
+  const fetchReminders = async () => {
+    try {
+      setLoading(true)
+      const token = getToken()
+      if (!token) {
+        console.warn('[StaffOverview] No token found, skipping reminders fetch')
+        setLoading(false)
+        return
+      }
+
+      // Fetch notifications with reminder category from admin
+      const response = await axios.get(`${API_BASE_URL}/notifications?type=alert`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.data.success && response.data.data) {
+        // Take only the most recent 3 reminders
+        const reminders = Array.isArray(response.data.data) ? response.data.data.slice(0, 3) : []
+        setReminders(reminders)
+        console.log('[StaffOverview] ✅ Fetched reminders:', reminders.length)
+      } else {
+        console.log('[StaffOverview] No reminders found')
+        setReminders([])
+      }
+    } catch (err) {
+      console.error('[StaffOverview] Error fetching reminders:', err)
+      // Don't set error state - reminders are optional
+      setReminders([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-50 border-l-4 border-red-400'
+      case 'normal':
+        return 'bg-blue-50 border-l-4 border-blue-400'
+      case 'low':
+        return 'bg-green-50 border-l-4 border-green-400'
+      default:
+        return 'bg-yellow-50 border-l-4 border-yellow-400'
+    }
+  }
+
+  const getPriorityTextColor = (priority?: string) => {
+    switch (priority) {
+      case 'high':
+        return 'text-red-800'
+      case 'normal':
+        return 'text-blue-800'
+      case 'low':
+        return 'text-green-800'
+      default:
+        return 'text-yellow-800'
     }
   }
 
@@ -112,38 +186,64 @@ const StaffOverview: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-bold text-[#5E372E] mb-4">Quick Actions</h2>
               <div className="space-y-3">
-                <button className="w-full px-4 py-3 bg-[#c79a63] text-white rounded-lg hover:bg-[#b88a52] transition-colors text-left flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    console.log('[StaffOverview] 🔵 View Today\'s Orders clicked')
+                    onSelectTab?.('Orders')
+                  }}
+                  className="w-full px-4 py-3 bg-[#c79a63] text-white rounded-lg hover:bg-[#b88a52] transition-colors text-left flex items-center gap-3"
+                >
                   <span className="text-lg">📋</span>
                   <span>View Today's Orders</span>
                 </button>
-                <button className="w-full px-4 py-3 bg-[#d4ac6f] text-white rounded-lg hover:bg-[#c79a63] transition-colors text-left flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    console.log('[StaffOverview] 🔵 Message Admin clicked')
+                    onSelectTab?.('Messages')
+                  }}
+                  className="w-full px-4 py-3 bg-[#d4ac6f] text-white rounded-lg hover:bg-[#c79a63] transition-colors text-left flex items-center gap-3"
+                >
                   <span className="text-lg">✉️</span>
                   <span>Message Admin</span>
                 </button>
-                <button className="w-full px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-left flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    console.log('[StaffOverview] 🔵 Upcoming Events clicked')
+                    onSelectTab?.('Events')
+                  }}
+                  className="w-full px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-left flex items-center gap-3"
+                >
                   <span className="text-lg">🎉</span>
                   <span>Upcoming Events</span>
                 </button>
               </div>
             </div>
 
-            {/* Reminders */}
+            {/* Reminders - Fetched from Backend */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-bold text-[#5E372E] mb-4">Important Reminders</h2>
-              <div className="space-y-3">
-                <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                  <p className="font-semibold text-yellow-800">Quality Check Due</p>
-                  <p className="text-sm text-yellow-700">Check materials inventory before end of shift</p>
+              {reminders.length === 0 ? (
+                <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-600">
+                  <p>No reminders at this time</p>
+                  <p className="text-sm text-gray-500 mt-1">Admin will send important reminders here</p>
                 </div>
-                <div className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
-                  <p className="font-semibold text-blue-800">Team Meeting</p>
-                  <p className="text-sm text-blue-700">3:00 PM - Production team sync</p>
+              ) : (
+                <div className="space-y-3">
+                  {reminders.map((reminder) => (
+                    <div key={reminder._id} className={`p-3 rounded ${getPriorityColor(reminder.priority)}`}>
+                      <p className={`font-semibold ${getPriorityTextColor(reminder.priority)}`}>
+                        {reminder.title}
+                      </p>
+                      <p className={`text-sm ${getPriorityTextColor(reminder.priority)} opacity-90`}>
+                        {reminder.message}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(reminder.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-                <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
-                  <p className="font-semibold text-green-800">New Guidelines</p>
-                  <p className="text-sm text-green-700">Check messages for updated procedures</p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </>

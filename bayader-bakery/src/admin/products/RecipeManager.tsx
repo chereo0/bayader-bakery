@@ -129,6 +129,7 @@ const RecipeManager: React.FC<Props> = ({ recipe, onChange, disabled = false }) 
               <div key={index} className="flex items-center gap-2 p-2 border border-gray-200 rounded">
                 <div className="flex-1">
                   <select
+                    title="Select Material"
                     value={item.material}
                     onChange={(e) => updateRecipeItem(index, 'material', e.target.value)}
                     disabled={disabled}

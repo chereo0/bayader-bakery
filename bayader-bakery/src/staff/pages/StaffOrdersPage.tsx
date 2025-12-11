@@ -206,22 +206,23 @@ const StaffOrdersPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-[#5E372E]">Orders Management</h1>
-          <p className="text-gray-600 mt-2">View and manage orders for production and fulfillment</p>
+          <h1 className="text-3xl font-bold text-[#5E372E] dark:text-[#d4a574]">Orders Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">View and manage orders for production and fulfillment</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <div className="flex items-center gap-4">
-          <label className="font-medium text-gray-700">Filter by Status:</label>
+          <label className="font-medium text-gray-700 dark:text-gray-300">Filter by Status:</label>
           <select
+            title="Filter by Order Status"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value)
               setPage(1)
             }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c79a63] focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#c79a63] focus:border-transparent"
           >
             <option value="all">All Orders</option>
             <option value="pending">Pending</option>
@@ -238,7 +239,7 @@ const StaffOrdersPage: React.FC = () => {
           <div
             key={toast.id}
             className={`px-4 py-3 rounded-lg shadow-lg text-white font-medium transition-all ${
-              toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+              toast.type === 'success' ? 'bg-green-500 dark:bg-green-600' : 'bg-red-500 dark:bg-red-600'
             }`}
           >
             {toast.message}
@@ -247,7 +248,7 @@ const StaffOrdersPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
         </div>
       )}
@@ -255,53 +256,53 @@ const StaffOrdersPage: React.FC = () => {
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#c79a63]"></div>
-          <p className="text-gray-600 mt-4">Loading orders...</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-4">Loading orders...</p>
         </div>
       ) : (
         <>
           {/* Orders Table */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
             {orders.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-gray-600 text-lg">No orders found</p>
-                <p className="text-gray-500 mt-1">Try adjusting your filters</p>
+                <p className="text-gray-600 dark:text-gray-400 text-lg">No orders found</p>
+                <p className="text-gray-500 dark:text-gray-500 mt-1">Try adjusting your filters</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Order #
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Items
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Total
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Delivery City
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Date
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Action
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {orders.map((order) => {
                       const nextStatus = getNextStatus(order.status)
                       const isUpdating = updatingOrderId === order._id
                       
                       return (
-                        <tr key={order._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-sm font-medium text-[#5E372E]">
+                        <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <td className="px-6 py-4 text-sm font-medium text-[#5E372E] dark:text-[#d4a574]">
                             #{order.orderNumber}
                           </td>
                           <td className="px-6 py-4">
@@ -309,16 +310,16 @@ const StaffOrdersPage: React.FC = () => {
                               {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-700">
+                          <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                             {order.items?.length || 0} item(s)
                           </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-[#5E372E]">
+                          <td className="px-6 py-4 text-sm font-semibold text-[#5E372E] dark:text-[#d4a574]">
                             {order.totalAmount?.toFixed(2)} SAR
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-700">
+                          <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                             {order.deliveryAddress?.city || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-700">
+                          <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                             {formatDate(order.createdAt)}
                           </td>
                           <td className="px-6 py-4 text-sm">
@@ -326,12 +327,12 @@ const StaffOrdersPage: React.FC = () => {
                               <button
                                 onClick={() => openConfirmDialog(order)}
                                 disabled={isUpdating}
-                                className="px-3 py-2 bg-[#c79a63] text-white rounded-lg hover:bg-[#b8885a] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                                className="px-3 py-2 bg-[#c79a63] text-white rounded-lg hover:bg-[#b8885a] dark:bg-[#a0794a] dark:hover:bg-[#8f6a3b] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
                               >
                                 {isUpdating ? '⏳ Updating...' : getButtonLabel(order.status)}
                               </button>
                             ) : (
-                              <span className="text-gray-500 text-sm">✓ Complete</span>
+                              <span className="text-gray-500 dark:text-gray-400 text-sm">✓ Complete</span>
                             )}
                           </td>
                         </tr>
@@ -349,17 +350,17 @@ const StaffOrdersPage: React.FC = () => {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
               >
                 Previous
               </button>
-              <span className="px-4 py-2 text-gray-700">
+              <span className="px-4 py-2 text-gray-700 dark:text-gray-300">
                 Page {page} of {Math.ceil(total / 20)}
               </span>
               <button
                 onClick={() => setPage(page + 1)}
                 disabled={page * 20 >= total}
-                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
               >
                 Next
               </button>
@@ -371,26 +372,26 @@ const StaffOrdersPage: React.FC = () => {
       {/* Confirmation Dialog */}
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h2 className="text-lg font-bold text-[#5E372E] mb-4">Confirm Status Update</h2>
-            <p className="text-gray-600 mb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h2 className="text-lg font-bold text-[#5E372E] dark:text-[#d4a574] mb-4">Confirm Status Update</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
               Order <span className="font-semibold">#{confirmDialog.orderNumber}</span>
             </p>
-            <p className="text-gray-600 mb-6">
-              Update status from <span className="font-semibold text-blue-600">{confirmDialog.currentStatus}</span> to{' '}
-              <span className="font-semibold text-green-600">{confirmDialog.nextStatus}</span>?
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Update status from <span className="font-semibold text-blue-600 dark:text-blue-400">{confirmDialog.currentStatus}</span> to{' '}
+              <span className="font-semibold text-green-600 dark:text-green-400">{confirmDialog.nextStatus}</span>?
             </p>
             <div className="flex gap-3">
               <button
                 onClick={closeConfirmDialog}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStatusUpdate}
                 disabled={updatingOrderId === confirmDialog.orderId}
-                className="flex-1 px-4 py-2 bg-[#c79a63] text-white rounded-lg hover:bg-[#b8885a] disabled:opacity-50 font-medium transition-colors"
+                className="flex-1 px-4 py-2 bg-[#c79a63] text-white rounded-lg hover:bg-[#b8885a] dark:bg-[#a0794a] dark:hover:bg-[#8f6a3b] disabled:opacity-50 font-medium transition-colors"
               >
                 {updatingOrderId === confirmDialog.orderId ? 'Updating...' : 'Confirm'}
               </button>

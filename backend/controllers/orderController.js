@@ -1,8 +1,10 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Material = require('../models/Material');
+const User = require('../models/User');
 const logger = require('../utils/logger');
 const { getNextOrderNumber } = require('../utils/orderNumberGenerator');
+const { sendOrderCreatedEmail, sendOrderStatusChangedEmail } = require('../services/emailService');
 
 // Validate delivery address
 const validateDeliveryAddress = (address) => {
@@ -206,6 +208,22 @@ const createOrder = async (req, res, next) => {
     await order.save();
 
     logger.info(`Order created successfully: ${order._id} with orderNumber: ${order.orderNumber} for user ${userId}`);
+
+    // Send order creation email (don't wait for it)
+    try {
+      const customer = await User.findById(userId);
+      if (customer) {
+        sendOrderCreatedEmail(customer, {
+          orderId: order.orderNumber,
+          status: order.status,
+          totalAmount: order.totalAmount,
+          items: order.items,
+          estimatedDeliveryTime: order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate).toLocaleDateString() : 'TBD',
+        });
+      }
+    } catch (emailError) {
+      logger.error('Failed to send order creation email:', emailError);
+    }
 
     res.status(201).json({ 
       success: true, 
@@ -418,6 +436,22 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     logger.info(`Order ${id} status updated from ${prevStatus} to ${status}`);
+
+    // Send order status change email (don't wait for it)
+    try {
+      const customer = await User.findById(order.user);
+      if (customer && prevStatus !== status) {
+        sendOrderStatusChangedEmail(customer, {
+          orderId: order.orderNumber,
+          status: order.status,
+          totalAmount: order.totalAmount,
+          items: order.items,
+          estimatedDeliveryTime: order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate).toLocaleDateString() : 'TBD',
+        }, prevStatus, status);
+      }
+    } catch (emailError) {
+      logger.error('Failed to send order status change email:', emailError);
+    }
 
     const response = { 
       success: true, 

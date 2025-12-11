@@ -10,7 +10,7 @@ const getPublicEvents = async (req, res) => {
 
     const now = new Date()
 
-    // Build filter for public events
+    // Build filter for public events - always require isActive and valid dates
     const filter = { 
       isActive: true,
       $or: [
@@ -19,13 +19,18 @@ const getPublicEvents = async (req, res) => {
       ]
     }
 
+    // Add search filter if provided
+    // When searching, events must match BOTH date criteria AND search terms
     if (search) {
-      filter.$or = [
-        ...filter.$or,
-        { title: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } },
-        { venue: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+      filter.$and = [
+        { 
+          $or: [
+            { title: { $regex: search, $options: 'i' } },
+            { name: { $regex: search, $options: 'i' } },
+            { venue: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } }
+          ]
+        }
       ]
     }
 

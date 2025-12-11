@@ -99,15 +99,38 @@ const EventsPublicPage: React.FC = () => {
       return
     }
 
-    // Here you would typically send the booking data to the backend
-    // For now, we'll just show a success message
-    alert(
-      `✅ Booking Request Submitted!\n\nEvent: ${selectedEvent?.title}\nGuests: ${bookingData.guests}\nWe'll contact you at ${bookingData.email} to confirm.`
-    )
+    try {
+      // Send booking request to backend API
+      const token = localStorage.getItem('token')
+      const response = await axios.post(
+        `${API_BASE_URL}/event-bookings`,
+        {
+          eventId: selectedEvent?._id,
+          name: bookingData.name,
+          phone: bookingData.email, // Using email as phone for now
+          peopleCount: bookingData.guests,
+          dateRequested: new Date().toISOString(),
+          message: ''
+        },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        }
+      )
 
-    setShowBooking(false)
-    setBookingData({ name: '', email: '', guests: 1 })
-    setSelectedEvent(null)
+      if (response.data.success) {
+        alert(
+          `✅ Booking Request Submitted!\n\nEvent: ${selectedEvent?.title}\nGuests: ${bookingData.guests}\nWe'll contact you at ${bookingData.email} to confirm.`
+        )
+        setShowBooking(false)
+        setBookingData({ name: '', email: '', guests: 1 })
+        setSelectedEvent(null)
+      } else {
+        alert('❌ Failed to submit booking. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error submitting booking:', error)
+      alert('❌ Error submitting booking. Please try again later.')
+    }
   }
 
   // Single event detail view
@@ -231,6 +254,7 @@ const EventsPublicPage: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-[#5E372E] mb-2">Sort by</label>
               <select
+                title="Sort Events"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'date' | 'price')}
                 className="w-full border border-[#d4ac6f] rounded-lg px-4 py-2 text-[#5E372E]"
@@ -401,6 +425,8 @@ const EventsPublicPage: React.FC = () => {
                 <input
                   type="number"
                   min="1"
+                  title="Number of Guests"
+                  placeholder="1"
                   value={bookingData.guests}
                   onChange={(e) =>
                     setBookingData({ ...bookingData, guests: Math.max(1, parseInt(e.target.value)) })

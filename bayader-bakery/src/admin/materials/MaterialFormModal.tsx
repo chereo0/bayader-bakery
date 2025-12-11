@@ -132,6 +132,7 @@ const MaterialFormModal: React.FC<Props> = ({ open, material, onSave, onClose })
             <label className="block text-sm font-medium mb-1">Unit *</label>
             <select
               required
+              title="Unit of Measurement"
               value={form.unit}
               onChange={(e) => handleChange('unit', e.target.value)}
               className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f] focus:border-transparent"
@@ -151,6 +152,8 @@ const MaterialFormModal: React.FC<Props> = ({ open, material, onSave, onClose })
               type="number"
               min="0"
               step="0.01"
+              title="Current Stock"
+              placeholder="0.00"
               value={form.currentStock}
               onChange={(e) => handleChange('currentStock', e.target.value)}
               className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f] focus:border-transparent"
@@ -164,6 +167,8 @@ const MaterialFormModal: React.FC<Props> = ({ open, material, onSave, onClose })
               type="number"
               min="0"
               step="0.01"
+              title="Reorder Level"
+              placeholder="10"
               value={form.reorderLevel}
               onChange={(e) => handleChange('reorderLevel', e.target.value)}
               className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f] focus:border-transparent"

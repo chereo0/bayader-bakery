@@ -4,13 +4,18 @@ const config = require('../config');
 // Middleware to verify JWT token
 const auth = (req, res, next) => {
   try {
+    // CRITICAL: Always set JSON content type FIRST
+    res.set('Content-Type', 'application/json');
+    
     // Get token from header
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[AUTH] ❌ No token provided for path:', req.path);
       return res.status(401).json({
         success: false,
-        message: 'Not authorized, no token'
+        message: 'Not authorized, no token',
+        data: null
       });
     }
 
@@ -26,16 +31,21 @@ const auth = (req, res, next) => {
     // Debug logging in development to help trace auth issues
     if (config.NODE_ENV === 'development') {
       try {
-        console.debug('auth middleware decoded token:', { id: decoded.id, role: decoded.role, email: decoded.email });
+        console.log('[AUTH] ✅ Token verified for user:', { id: decoded.id, role: decoded.role, email: decoded.email, path: req.path });
       } catch (e) {
-        console.debug('auth middleware decoded token (no details)');
+        console.log('[AUTH] ✅ Token verified (minimal info)');
       }
     }
     next();
   } catch (err) {
+    console.log('[AUTH] ❌ Token verification failed:', { error: err.message, path: req.path });
+    // CRITICAL: Always set JSON content type on error
+    res.set('Content-Type', 'application/json');
     return res.status(401).json({
       success: false,
-      message: 'Not authorized, token invalid'
+      message: 'Not authorized, token invalid',
+      error: err.message,
+      data: null
     });
   }
 };

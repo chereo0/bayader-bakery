@@ -31,6 +31,7 @@ const MaterialFilters: React.FC<Props> = ({
       </div>
 
       <select
+        title="Filter by Status"
         value={isActiveFilter === undefined ? 'all' : isActiveFilter.toString()}
         onChange={(e) => {
           const value = e.target.value;

@@ -24,6 +24,7 @@ const MaterialFilters: React.FC<MaterialFiltersProps> = ({
       className="border border-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
     />
     <select
+      title="Filter by Status"
       value={isActiveFilter === undefined ? 'all' : isActiveFilter.toString()}
       onChange={(e) => {
         const value = e.target.value;
@@ -201,6 +202,8 @@ const MaterialFormModal: React.FC<MaterialFormModalProps> = ({ open, material, o
             <input
               required
               type="text"
+              title="Material Name"
+              placeholder="Enter material name"
               value={form.name}
               onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
               className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
@@ -211,6 +214,7 @@ const MaterialFormModal: React.FC<MaterialFormModalProps> = ({ open, material, o
             <label className="block text-sm font-medium mb-1">Unit *</label>
             <select
               required
+              title="Unit of Measurement"
               value={form.unit}
               onChange={(e) => setForm(prev => ({ ...prev, unit: e.target.value }))}
               className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
@@ -235,6 +239,8 @@ const MaterialFormModal: React.FC<MaterialFormModalProps> = ({ open, material, o
                 type="number"
                 min="0"
                 step="0.01"
+                title="Current Stock"
+                placeholder="0.00"
                 value={form.currentStock}
                 onChange={(e) => setForm(prev => ({ ...prev, currentStock: Number(e.target.value) }))}
                 className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
@@ -246,6 +252,8 @@ const MaterialFormModal: React.FC<MaterialFormModalProps> = ({ open, material, o
                 type="number"
                 min="0"
                 step="0.01"
+                title="Reorder Level"
+                placeholder="10"
                 value={form.reorderLevel}
                 onChange={(e) => setForm(prev => ({ ...prev, reorderLevel: Number(e.target.value) }))}
                 className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"

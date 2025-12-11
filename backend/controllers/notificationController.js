@@ -4,10 +4,28 @@ const logger = require('../utils/logger');
 // Get notifications for current user
 exports.getNotifications = async (req, res) => {
   try {
+    console.log('[NOTIFICATIONS] 🔵 getNotifications() called for path:', req.path);
+    console.log('[NOTIFICATIONS] 🔵 User authenticated:', !!req.user, req.user?._id || req.user?.id);
+    
+    // CRITICAL: Set JSON content type IMMEDIATELY
+    res.set('Content-Type', 'application/json');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    
+    // Defensive: Ensure user is authenticated
+    if (!req.user || (!req.user._id && !req.user.id)) {
+      console.log('[NOTIFICATIONS] ❌ User not authenticated - returning 401');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User not authenticated',
+        data: []
+      });
+    }
+
+    const userId = req.user._id || req.user.id;
     const { page = 1, limit = 10, read = false, type } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    let filter = { recipient: req.user._id };
+    let filter = { recipient: userId };
     
     if (read !== undefined) {
       filter.read = read === 'true';
@@ -25,11 +43,12 @@ exports.getNotifications = async (req, res) => {
 
     const total = await Notification.countDocuments(filter);
 
-    logger.info(`Notifications fetched for user ${req.user._id}: ${notifications.length} items`);
+    console.log('[NOTIFICATIONS] ✅ Notifications fetched:', { userId, count: notifications.length, total });
 
+    // Always return JSON, never HTML
     res.json({
       success: true,
-      data: notifications,
+      data: notifications || [],
       pagination: {
         total,
         page: parseInt(page),
@@ -38,26 +57,59 @@ exports.getNotifications = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Error fetching notifications', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.log('[NOTIFICATIONS] ❌ Error fetching notifications:', error.message);
+    // Ensure error response is JSON
+    res.set('Content-Type', 'application/json');
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch notifications',
+      error: error.message,
+      data: []
+    });
   }
 };
 
 // Get unread notification count
 exports.getUnreadCount = async (req, res) => {
   try {
+    console.log('[NOTIFICATIONS-UNREAD] 🔵 getUnreadCount() called for path:', req.path);
+    console.log('[NOTIFICATIONS-UNREAD] 🔵 User authenticated:', !!req.user, req.user?._id || req.user?.id);
+    
+    // CRITICAL: Set JSON content type IMMEDIATELY
+    res.set('Content-Type', 'application/json');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    
+    // Defensive: Ensure user is authenticated
+    if (!req.user || (!req.user._id && !req.user.id)) {
+      console.log('[NOTIFICATIONS-UNREAD] ❌ User not authenticated - returning 401');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User not authenticated',
+        data: { unreadCount: 0 }
+      });
+    }
+
+    const userId = req.user._id || req.user.id;
     const unreadCount = await Notification.countDocuments({
-      recipient: req.user._id,
+      recipient: userId,
       read: false
     });
 
+    console.log('[NOTIFICATIONS-UNREAD] ✅ Unread count fetched:', { userId, unreadCount });
+
     res.json({
       success: true,
-      data: { unreadCount }
+      data: { unreadCount: unreadCount || 0 }
     });
   } catch (error) {
-    logger.error('Error fetching unread count', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.log('[NOTIFICATIONS-UNREAD] ❌ Error fetching unread count:', error.message);
+    res.set('Content-Type', 'application/json');
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch unread count',
+      error: error.message,
+      data: { unreadCount: 0 }
+    });
   }
 };
 

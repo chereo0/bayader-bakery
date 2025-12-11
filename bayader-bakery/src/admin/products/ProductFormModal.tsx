@@ -88,12 +88,12 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium">Name</label>
-            <input required value={form.name} onChange={e=>handleChange('name', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
+            <input required title="Product Name" placeholder="Enter product name" value={form.name} onChange={e=>handleChange('name', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
           </div>
 
           <div>
             <label className="text-sm font-medium">Category</label>
-            <select required value={form.category} onChange={e=>handleChange('category', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]">
+            <select required title="Product Category" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]">
               <option value="">Select Category</option>
               <option value="Cakes">Cakes</option>
               <option value="Pastries">Pastries</option>
@@ -106,17 +106,17 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
 
           <div>
             <label className="text-sm font-medium">Stock</label>
-            <input required type="number" min="0" value={form.stock ?? 0} onChange={e=>handleChange('stock', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
+            <input required type="number" min="0" title="Stock Quantity" placeholder="0" value={form.stock ?? 0} onChange={e=>handleChange('stock', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
           </div>
 
           <div>
             <label className="text-sm font-medium">Price ($)</label>
-            <input required type="number" min="0" step="0.01" value={form.price} onChange={e=>handleChange('price', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
+            <input required type="number" min="0" step="0.01" title="Product Price" placeholder="0.00" value={form.price} onChange={e=>handleChange('price', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
           </div>
 
           <div>
             <label className="text-sm font-medium">Status</label>
-            <select value={form.status ?? 'Active'} onChange={e=>handleChange('status', e.target.value as any)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]">
+            <select title="Product Status" value={form.status ?? 'Active'} onChange={e=>handleChange('status', e.target.value as any)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]">
               <option value="Active">Active</option>
               <option value="Out of Stock">Out of Stock</option>
               <option value="Draft">Draft</option>
@@ -127,7 +127,7 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
             <label className="text-sm font-medium">Image URL</label>
             <div className="flex gap-2 items-center">
               <input value={form.image ?? ''} onChange={e=>handleChange('image', e.target.value)} className="flex-1 border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" placeholder="Enter image URL" />
-              <input type="file" accept="image/*" onChange={e=>handleFile(e.target.files?.[0])} className="text-sm" />
+              <input type="file" accept="image/*" title="Upload Product Image" onChange={e=>handleFile(e.target.files?.[0])} className="text-sm" />
             </div>
             {uploading && <div className="text-sm text-gray-500 mt-1">Uploading...</div>}
           </div>

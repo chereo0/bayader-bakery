@@ -1,6 +1,19 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 const API_BASE_URL = 'http://localhost:5000/api'
+
+interface Order {
+  _id: string
+  orderId: string
+  status: string
+  totalAmount: number
+}
+
+interface Driver {
+  _id: string
+  name: string
+  status: string
+}
 
 interface QuickActionsProps {
   onOrderAssigned?: () => void
@@ -17,27 +30,98 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [availableOrders, setAvailableOrders] = useState<Order[]>([])
+  const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([])
+  const [fetchingData, setFetchingData] = useState(false)
 
   const token = localStorage.getItem('token')
+
+  // Fetch available orders and drivers when modal opens
+  useEffect(() => {
+    if (showAssignModal) {
+      fetchOrdersAndDrivers()
+    }
+  }, [showAssignModal])
+
+  const fetchOrdersAndDrivers = async () => {
+    try {
+      console.log('[QuickActions] 🔵 Fetching orders and drivers...')
+      setFetchingData(true)
+      setError(null)
+
+      // Fetch active orders (ready to be assigned)
+      console.log('[QuickActions] 📧 Fetching active orders from:', `${API_BASE_URL}/orders?status=active`)
+      const ordersResponse = await fetch(`${API_BASE_URL}/orders?status=active`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      // Fetch all drivers (we'll filter by status if available)
+      console.log('[QuickActions] 📧 Fetching available drivers from:', `${API_BASE_URL}/drivers?status=available`)
+      const driversResponse = await fetch(`${API_BASE_URL}/drivers?status=available`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json()
+        // Handle both response formats: data.orders and data array
+        const ordersList = ordersData.data?.orders || ordersData.data || []
+        console.log('[QuickActions] ✅ Orders fetched:', ordersList.length, 'orders')
+        setAvailableOrders(ordersList)
+      } else {
+        console.warn('[QuickActions] ⚠️ Orders response not ok:', ordersResponse.status)
+        setAvailableOrders([])
+      }
+
+      if (driversResponse.ok) {
+        const driversData = await driversResponse.json()
+        // Handle both response formats: data array and nested structure
+        const driversList = Array.isArray(driversData.data) ? driversData.data : driversData.data?.drivers || []
+        console.log('[QuickActions] ✅ Drivers fetched:', driversList.length, 'drivers')
+        setAvailableDrivers(driversList)
+      } else {
+        console.warn('[QuickActions] ⚠️ Drivers response not ok:', driversResponse.status)
+        setAvailableDrivers([])
+      }
+    } catch (err) {
+      console.error('[QuickActions] ❌ Error fetching data:', err)
+      // Continue anyway with empty lists
+    } finally {
+      setFetchingData(false)
+    }
+  }
 
   // Assign Ready Order
   const handleAssignOrder = async () => {
     try {
+      console.log('[QuickActions] 🔵 handleAssignOrder called')
       setLoading(true)
       setError(null)
       setSuccess(null)
 
       if (!selectedOrder) {
+        console.warn('[QuickActions] ⚠️ No order selected')
         setError('Please select an order')
+        setLoading(false)
         return
       }
 
       if (!selectedDriver) {
+        console.warn('[QuickActions] ⚠️ No driver selected')
         setError('Please select a driver')
+        setLoading(false)
         return
       }
 
-      const response = await fetch(`${API_BASE_URL}/deliveries/${selectedOrder}/assign`, {
+      const assignUrl = `${API_BASE_URL}/deliveries/${selectedOrder}/assign`
+      console.log('[QuickActions] 📧 Sending assignment request to:', assignUrl)
+      console.log('[QuickActions] 📋 Payload:', { driverId: selectedDriver })
+      const response = await fetch(assignUrl, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -47,9 +131,12 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
       })
 
       if (!response.ok) {
-        throw new Error('Failed to assign order')
+        console.error('[QuickActions] ❌ Assignment failed, status:', response.status)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to assign order')
       }
 
+      console.log('[QuickActions] ✅ Order assigned successfully!')
       setSuccess('Order assigned successfully!')
       setSelectedOrder('')
       setSelectedDriver('')
@@ -58,6 +145,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
         onOrderAssigned?.()
       }, 1500)
     } catch (err: any) {
+      console.error('[QuickActions] ❌ Error in handleAssignOrder:', err.message)
       setError(err.message || 'Failed to assign order')
     } finally {
       setLoading(false)
@@ -67,15 +155,28 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
   // Report Production Issue
   const handleReportIssue = async () => {
     try {
+      console.log('[QuickActions] 🔵 handleReportIssue called')
       setLoading(true)
       setError(null)
       setSuccess(null)
 
       if (!issueDescription.trim()) {
+        console.warn('[QuickActions] ⚠️ Issue description is empty')
         setError('Please describe the issue')
+        setLoading(false)
         return
       }
 
+      const payload = {
+        recipientId: '', // Admin will receive this
+        type: 'alert',
+        title: 'Production Issue Reported',
+        message: issueDescription,
+        priority: issuePriority,
+        category: 'production'
+      }
+      console.log('[QuickActions] 📧 Sending issue report to:', `${API_BASE_URL}/notifications`)
+      console.log('[QuickActions] 📋 Payload:', payload)
       // Create a notification for the issue
       const response = await fetch(`${API_BASE_URL}/notifications`, {
         method: 'POST',
@@ -83,20 +184,16 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          recipientId: '', // Admin will receive this
-          type: 'alert',
-          title: 'Production Issue Reported',
-          message: issueDescription,
-          priority: issuePriority,
-          category: 'production'
-        })
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
-        throw new Error('Failed to report issue')
+        console.error('[QuickActions] ❌ Report failed, status:', response.status)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to report issue')
       }
 
+      console.log('[QuickActions] ✅ Issue reported successfully!')
       setSuccess('Issue reported successfully!')
       setIssueDescription('')
       setIssuePriority('normal')
@@ -105,6 +202,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
         onIssueReported?.()
       }, 1500)
     } catch (err: any) {
+      console.error('[QuickActions] ❌ Error in handleReportIssue:', err.message)
       setError(err.message || 'Failed to report issue')
     } finally {
       setLoading(false)
@@ -158,34 +256,56 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Order
                 </label>
-                <select
-                  value={selectedOrder}
-                  onChange={(e) => setSelectedOrder(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
-                >
-                  <option value="">Choose an order...</option>
-                  <option value="order-001">Order #001 - 3 Layer Cake</option>
-                  <option value="order-002">Order #002 - Chocolate Brownies</option>
-                  <option value="order-003">Order #003 - Wedding Cake</option>
-                </select>
+                {fetchingData ? (
+                  <div className="p-3 bg-gray-100 rounded text-gray-600 text-sm">Loading orders...</div>
+                ) : availableOrders.length > 0 ? (
+                  <select
+                    title="Select Order"
+                    value={selectedOrder}
+                    onChange={(e) => setSelectedOrder(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                  >
+                    <option value="">Choose an order...</option>
+                    {availableOrders.map(order => (
+                      <option key={order._id} value={order._id}>
+                        Order #{order.orderId} - ${order.totalAmount.toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700 text-sm">
+                    No ready orders available for assignment
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Driver
                 </label>
-                <select
-                  value={selectedDriver}
-                  onChange={(e) => setSelectedDriver(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
-                >
-                  <option value="">Choose a driver...</option>
-                  <option value="driver-001">Ahmed Hassan</option>
-                  <option value="driver-002">Mohammed Ali</option>
-                  <option value="driver-003">Fatima Khan</option>
-                </select>
+                {fetchingData ? (
+                  <div className="p-3 bg-gray-100 rounded text-gray-600 text-sm">Loading drivers...</div>
+                ) : availableDrivers.length > 0 ? (
+                  <select
+                    title="Select Driver"
+                    value={selectedDriver}
+                    onChange={(e) => setSelectedDriver(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                  >
+                    <option value="">Choose a driver...</option>
+                    {availableDrivers.map(driver => (
+                      <option key={driver._id} value={driver._id}>
+                        {driver.name} - {driver.status}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700 text-sm">
+                    No available drivers found
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">
@@ -233,6 +353,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onOrderAssigned, onIssueRep
                   Priority
                 </label>
                 <select
+                  title="Issue Priority"
                   value={issuePriority}
                   onChange={(e) => setIssuePriority(e.target.value)}
                   disabled={loading}

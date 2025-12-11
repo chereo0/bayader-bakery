@@ -1,4 +1,9 @@
 module.exports = function errorHandler(err, req, res, next) {
+  console.log('[ERROR-HANDLER] ❌ Unhandled error:', { message: err.message, path: req.path, stack: err.stack });
+  
+  // CRITICAL: Always set JSON content type, NEVER HTML
+  res.set('Content-Type', 'application/json');
+  
   // Default error response
   let status = err.statusCode || 500;
   let message = err.message || 'Server Error';
@@ -51,7 +56,8 @@ module.exports = function errorHandler(err, req, res, next) {
   const response = {
     success: false,
     message,
-    ...(process.env.NODE_ENV === 'development' && { details, stack: err.stack })
+    ...(process.env.NODE_ENV === 'development' && { details, stack: err.stack }),
+    data: null
   };
 
   res.status(status).json(response);

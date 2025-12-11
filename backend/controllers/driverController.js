@@ -94,14 +94,46 @@ exports.createDriver = async (req, res) => {
 // @access  Private (Admin/Staff)
 exports.getAllDrivers = async (req, res) => {
   try {
-    const drivers = await User.find({ role: 'driver' })
+    const { status, page = 1, limit = 20 } = req.query;
+    
+    // Build filter
+    const filter = { role: 'driver' };
+    
+    // Support status filtering if provided
+    if (status) {
+      const validStatuses = ['available', 'on-route', 'off-duty', 'on-break'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` 
+        });
+      }
+      filter['profile.status'] = status;
+    }
+
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const drivers = await User.find(filter)
       .select('-password')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    const total = await User.countDocuments(filter);
 
     res.status(200).json({
       success: true,
       count: drivers.length,
-      data: drivers
+      data: drivers,
+      pagination: { 
+        page: pageNum, 
+        limit: limitNum, 
+        total, 
+        pages: Math.ceil(total / limitNum) 
+      }
     });
   } catch (err) {
     console.error('Get drivers error:', err);

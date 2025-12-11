@@ -32,6 +32,8 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/events', require('./routes/events'));
+app.use('/api/event-bookings', require('./routes/eventBookingRoutes'));
+app.use('/api/custom-orders', require('./routes/customOrderRoutes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/drivers', require('./routes/drivers'));
 app.use('/api/messages', require('./routes/messages'));
@@ -47,6 +49,19 @@ app.use('/api/inventory', require('./routes/inventory'));
 if (config.NODE_ENV === 'development') {
   app.use('/api/debug', require('./routes/debug'));
 }
+
+// CRITICAL SAFETY CHECK: Prevent /api/* from ever returning HTML
+app.use('/api', (req, res) => {
+  console.log('[SAFETY-CHECK] ❌ API route not found:', { method: req.method, path: req.path, url: req.url });
+  res.set('Content-Type', 'application/json');
+  res.status(404).json({ 
+    success: false, 
+    message: 'API endpoint not found',
+    path: req.path,
+    method: req.method,
+    data: null
+  });
+});
 
 // 404 and error handlers
 app.use(notFound);

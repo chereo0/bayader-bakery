@@ -15,7 +15,6 @@ interface SettingsState {
     sms: boolean;
   };
   preferences: {
-    language: string;
     theme: string;
     timezone: string;
   };
@@ -35,7 +34,6 @@ const StaffSettingsPage: React.FC = () => {
       sms: false
     },
     preferences: {
-      language: 'en',
       theme: 'light',
       timezone: 'UTC+3'
     }
@@ -51,6 +49,33 @@ const StaffSettingsPage: React.FC = () => {
     confirmPassword: ''
   });
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Apply theme when it changes
+  useEffect(() => {
+    const applyTheme = (theme: string) => {
+      const html = document.documentElement;
+      if (theme === 'dark') {
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        html.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
+    };
+    applyTheme(settings.preferences.theme);
+  }, [settings.preferences.theme]);
+
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    updateSetting('preferences', 'theme', savedTheme);
+    const html = document.documentElement;
+    if (savedTheme === 'dark') {
+      html.classList.add('dark');
+    } else {
+      html.classList.remove('dark');
+    }
+  }, []);
 
   // Fetch settings on component mount
   useEffect(() => {
@@ -219,6 +244,8 @@ const StaffSettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
             <input
               type="text"
+              title="Full Name"
+              placeholder="Enter full name"
               value={settings.profile.name}
               onChange={e => updateSetting('profile', 'name', e.target.value)}
               className="w-full border rounded px-3 py-2"
@@ -228,6 +255,8 @@ const StaffSettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
+              title="Email"
+              placeholder="Enter email"
               value={settings.profile.email}
               onChange={e => updateSetting('profile', 'email', e.target.value)}
               className="w-full border rounded px-3 py-2"
@@ -237,6 +266,8 @@ const StaffSettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input
               type="tel"
+              title="Phone"
+              placeholder="Enter phone number"
               value={settings.profile.phone}
               onChange={e => updateSetting('profile', 'phone', e.target.value)}
               className="w-full border rounded px-3 py-2"
@@ -245,6 +276,7 @@ const StaffSettingsPage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
             <select
+              title="Department"
               value={settings.profile.department}
               onChange={e => updateSetting('profile', 'department', e.target.value)}
               className="w-full border rounded px-3 py-2"
@@ -270,6 +302,7 @@ const StaffSettingsPage: React.FC = () => {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
+                title="Email Notifications Toggle"
                 checked={settings.notifications.email}
                 onChange={e => updateSetting('notifications', 'email', e.target.checked)}
                 className="sr-only peer"
@@ -285,6 +318,7 @@ const StaffSettingsPage: React.FC = () => {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
+                title="Push Notifications Toggle"
                 checked={settings.notifications.push}
                 onChange={e => updateSetting('notifications', 'push', e.target.checked)}
                 className="sr-only peer"
@@ -300,6 +334,7 @@ const StaffSettingsPage: React.FC = () => {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
+                title="SMS Notifications Toggle"
                 checked={settings.notifications.sms}
                 onChange={e => updateSetting('notifications', 'sms', e.target.checked)}
                 className="sr-only peer"
@@ -315,19 +350,21 @@ const StaffSettingsPage: React.FC = () => {
         <h3 className="text-lg font-semibold text-[#5E372E] mb-4">Preferences</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
             <select
-              value={settings.preferences.language}
-              onChange={e => updateSetting('preferences', 'language', e.target.value)}
+              title="Theme"
+              value={settings.preferences.theme}
+              onChange={e => updateSetting('preferences', 'theme', e.target.value)}
               className="w-full border rounded px-3 py-2"
             >
-              <option value="en">English</option>
-              <option value="ar">Arabic</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
             <select
+              title="Timezone"
               value={settings.preferences.timezone}
               onChange={e => updateSetting('preferences', 'timezone', e.target.value)}
               className="w-full border rounded px-3 py-2"
@@ -348,6 +385,7 @@ const StaffSettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
             <input
               type="password"
+              title="Current Password"
               placeholder="Enter current password"
               value={passwordData.currentPassword}
               onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
@@ -358,6 +396,7 @@ const StaffSettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
             <input
               type="password"
+              title="New Password"
               placeholder="Enter new password"
               value={passwordData.newPassword}
               onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
@@ -368,6 +407,7 @@ const StaffSettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
             <input
               type="password"
+              title="Confirm New Password"
               placeholder="Confirm new password"
               value={passwordData.confirmPassword}
               onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
