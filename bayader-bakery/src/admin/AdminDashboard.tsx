@@ -9,6 +9,7 @@ import AdminEventsPage from './events/AdminEventsPage'
 import OrdersManagementPage from './orders/OrdersManagementPage'
 import DriversManagementPage from './drivers/DriversManagementPage'
 import MessagingPage from './staff/MessagingPage'
+import AdminNotificationsPage from './AdminNotificationsPage'
 import DashboardStats from './DashboardStats'
 import SalesChart from './SalesChart'
 import OrdersTable from './OrdersTable'
@@ -103,6 +104,10 @@ const AdminDashboard: React.FC = () => {
 
             {selectedTab === 'Messages' && (
               <MessagingPage />
+            )}
+
+            {selectedTab === 'Notifications' && (
+              <AdminNotificationsPage />
             )}
           </main>
           </ToastProvider>

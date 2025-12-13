@@ -10,6 +10,9 @@ interface OrderItem {
   status: 'pending' | 'active' | 'shipped' | 'delivered'
   totalAmount: number
   items: any[]
+  isPickup?: boolean
+  pickupLocation?: string
+  phone?: string
   deliveryAddress?: {
     city: string
     line1: string
@@ -316,7 +319,7 @@ const StaffOrdersPage: React.FC = () => {
                         Total
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        Delivery City
+                        Location
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Date
@@ -360,7 +363,13 @@ const StaffOrdersPage: React.FC = () => {
                               {order.totalAmount?.toFixed(2)} SAR
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                              {order.deliveryAddress?.city || 'N/A'}
+                              {order.isPickup ? (
+                                <span className="flex items-center gap-1">
+                                  🏪 {order.pickupLocation || 'Pickup'}
+                                </span>
+                              ) : (
+                                order.deliveryAddress?.city || 'N/A'
+                              )}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                               {formatDate(order.createdAt)}

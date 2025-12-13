@@ -11,7 +11,11 @@ const {
   bulkDeleteUsers,
   getMySettings,
   updateMySettings,
-  updateMyPassword
+  updateMyPassword,
+  getMySavedAddresses,
+  addSavedAddress,
+  updateSavedAddress,
+  deleteSavedAddress
 } = require('../controllers/userController');
 
 // Staff/User settings routes (protected, any authenticated user)
@@ -23,6 +27,12 @@ router.put('/settings/me/password', auth, updateMyPassword);
 router.get('/me', auth, getMySettings);
 router.patch('/me', auth, updateMySettings);
 router.post('/change-password', auth, updateMyPassword);
+
+// Saved addresses routes (protected, any authenticated user)
+router.get('/me/addresses', auth, getMySavedAddresses);
+router.post('/me/addresses', auth, addSavedAddress);
+router.put('/me/addresses/:addressId', auth, updateSavedAddress);
+router.delete('/me/addresses/:addressId', auth, deleteSavedAddress);
 
 // List users - authenticated users can view (staff needs to find admins for messaging)
 // Supports ?role=admin|staff|driver|customer to filter

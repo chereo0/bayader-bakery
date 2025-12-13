@@ -5,6 +5,7 @@ const User = require('../models/User');
 const logger = require('../utils/logger');
 const { getNextOrderNumber } = require('../utils/orderNumberGenerator');
 const { sendOrderCreatedEmail, sendOrderStatusChangedEmail } = require('../services/emailService');
+const { sendNotifications } = require('../utils/notificationHelper');
 
 // Validate delivery address
 const validateDeliveryAddress = (address) => {
@@ -113,7 +114,7 @@ const validatePayment = (payment) => {
 // Create a new order (customer)
 const createOrder = async (req, res, next) => {
   try {
-    const { items, deliveryAddress, payment } = req.body;
+    const { items, deliveryAddress, payment, isPickup, pickupLocation, phone } = req.body;
     const userId = req.user?.id;
 
     // Validate userId
@@ -126,8 +127,17 @@ const createOrder = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Order items are required' });
     }
 
-    // Validate delivery address
-    validateDeliveryAddress(deliveryAddress);
+    // Validate delivery address or pickup location based on order type
+    if (isPickup) {
+      if (!pickupLocation) {
+        return res.status(400).json({ success: false, message: 'Pickup location is required for pickup orders' });
+      }
+      if (!phone) {
+        return res.status(400).json({ success: false, message: 'Phone number is required for pickup orders' });
+      }
+    } else {
+      validateDeliveryAddress(deliveryAddress);
+    }
 
     // Validate payment
     const validatedPayment = validatePayment(payment);
@@ -195,14 +205,24 @@ const createOrder = async (req, res, next) => {
     logger.info(`Generated orderNumber: ${orderNumber}`);
 
     // Create order document with pre-generated orderNumber
-    const order = new Order({
+    const orderData = {
       user: userId,
       items: orderItems,
       totalAmount: total,
-      deliveryAddress,
       payment: validatedPayment,
       orderNumber: orderNumber, // Set orderNumber explicitly before save
-    });
+      isPickup: isPickup || false,
+    };
+
+    // Add delivery address or pickup info based on order type
+    if (isPickup) {
+      orderData.pickupLocation = pickupLocation;
+      orderData.phone = phone;
+    } else {
+      orderData.deliveryAddress = deliveryAddress;
+    }
+
+    const order = new Order(orderData);
 
     // Save order with explicit error handling
     await order.save();
@@ -223,6 +243,13 @@ const createOrder = async (req, res, next) => {
       }
     } catch (emailError) {
       logger.error('Failed to send order creation email:', emailError);
+    }
+
+    // Send notifications to customer, staff, and admins
+    try {
+      await sendNotifications('orderCreated', order);
+    } catch (notifError) {
+      logger.error('Failed to send order creation notifications:', notifError);
     }
 
     res.status(201).json({ 
@@ -343,6 +370,8 @@ const getAllOrders = async (req, res, next) => {
 
 // Update order status (admin/staff/driver)
 const updateOrderStatus = async (req, res, next) => {
+  console.log('[UPDATE-ORDER-STATUS] ========== FUNCTION CALLED ==========');
+  console.log('[UPDATE-ORDER-STATUS] 📥 Request:', { orderId: req.params.id, newStatus: req.body.status, userId: req.user?._id, userName: req.user?.name });
   try {
     const { status } = req.body;
     const { id } = req.params;
@@ -356,6 +385,7 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     const order = await Order.findById(id);
+    console.log('[UPDATE-ORDER-STATUS] 📦 Order found:', { id: order?._id, orderNumber: order?.orderNumber, currentStatus: order?.status });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
@@ -397,10 +427,12 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     const prevStatus = order.status;
+    console.log('[UPDATE-ORDER-STATUS] ✅ Validation passed. Changing status:', prevStatus, '→', status);
     
     // Handle material deduction when order becomes active
     let materialDeductionResult = null;
     if (status === 'active' && prevStatus !== 'active') {
+      console.log('[UPDATE-ORDER-STATUS] 🔧 Handling material deduction for active status');
       const session = await Order.startSession();
       try {
         await session.withTransaction(async () => {
@@ -432,16 +464,22 @@ const updateOrderStatus = async (req, res, next) => {
       }
     } else {
       // Normal status update without material deduction
+      console.log('[UPDATE-ORDER-STATUS] 💾 Performing normal status update (no material deduction)');
       order.status = status;
       await order.save();
+      console.log('[UPDATE-ORDER-STATUS] ✅ Order saved to database');
     }
 
     logger.info(`Order ${id} status updated from ${prevStatus} to ${status}`);
+    console.log('[ORDER-STATUS] ✅ Order status saved to database');
+    console.log('[ORDER-STATUS] 📧 About to send email...');
 
     // Send order status change email (don't wait for it)
     try {
       const customer = await User.findById(order.user);
+      console.log('[ORDER-STATUS] 👤 Customer found:', customer?._id);
       if (customer && prevStatus !== status) {
+        console.log('[ORDER-STATUS] 📧 Sending email to:', customer.email);
         sendOrderStatusChangedEmail(customer, {
           orderId: order.orderNumber,
           status: order.status,
@@ -452,6 +490,28 @@ const updateOrderStatus = async (req, res, next) => {
       }
     } catch (emailError) {
       logger.error('Failed to send order status change email:', emailError);
+      console.error('[ORDER-STATUS] ❌ Email error:', emailError);
+    }
+
+    console.log('[ORDER-STATUS] 🔔 About to send notifications...');
+    // Send notifications to customer and staff
+    try {
+      console.log('[ORDER-STATUS] 🔔 Sending notifications for orderStatusChanged:', {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        userId: order.user,
+        newStatus: status,
+        actor: req.user?.name
+      });
+      await sendNotifications('orderStatusChanged', order, { 
+        newStatus: status,
+        actor: req.user,
+        actorName: req.user?.name 
+      });
+      console.log('[ORDER-STATUS] ✅ Notifications sent successfully');
+    } catch (notifError) {
+      logger.error('Failed to send order status change notifications:', notifError);
+      console.error('[ORDER-STATUS] ❌ Full error:', notifError);
     }
 
     const response = { 
@@ -808,6 +868,13 @@ const assignOrderToDriver = async (req, res, next) => {
     await order.populate('assignedDriver', 'name phone email');
 
     logger.info(`Order ${id} assigned to driver ${driverId}`);
+
+    // Send notifications to driver and customer
+    try {
+      await sendNotifications('orderAssignedDriver', order, { driver });
+    } catch (notifError) {
+      logger.error('Failed to send driver assignment notifications:', notifError);
+    }
 
     res.json({ 
       success: true, 

@@ -47,22 +47,22 @@ export default function App(){
       <CartProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
-          <Route path="/driver" element={
+          <Route path="/driver/*" element={
             <ProtectedRoute requiredRoles={['driver']}>
               <DriverDashboard />
             </ProtectedRoute>
           } />
-          <Route path="/staff" element={
+          <Route path="/staff/*" element={
             <ProtectedRoute requiredRoles={['staff']}>
               <StaffLayout />
             </ProtectedRoute>
           } />
-          <Route path="/staff-admin" element={
+          <Route path="/staff-admin/*" element={
             <ProtectedRoute adminOnly>
               <StaffDashboard />
             </ProtectedRoute>
           } />
-          <Route path="/admin" element={
+          <Route path="/admin/*" element={
             <ProtectedRoute adminOnly>
               <AdminDashboard />
             </ProtectedRoute>

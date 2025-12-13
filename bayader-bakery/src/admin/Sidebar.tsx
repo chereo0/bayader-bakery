@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { WheatIcon, ShoppingCartIcon, UserCircleIcon } from '../components/ui/Icon'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { Bell } from 'lucide-react'
 
 type Item = { key: string; label: string }
 
@@ -70,6 +71,8 @@ const MessagesIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
 const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const [unreadCount, setUnreadCount] = useState(0)
+  
   // Removed Feedback and Promotions per request
   const items: Item[] = [
     { key: 'Dashboard', label: 'Dashboard' },
@@ -83,6 +86,42 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
     { key: 'Inventory', label: 'Inventory' },
     { key: 'Messages', label: 'Messages' }
   ]
+
+  // Fetch unread notification count
+  useEffect(() => {
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 5000) // Poll every 5 seconds
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchUnreadCount = async () => {
+    try {
+      console.log('[ADMIN-SIDEBAR] 🔔 Fetching notifications...')
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.log('[ADMIN-SIDEBAR] ❌ No token found')
+        return
+      }
+
+      const response = await fetch('/api/notifications/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      console.log('[ADMIN-SIDEBAR] 🔔 Response status:', response.status)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('[ADMIN-SIDEBAR] 🔔 Notifications data:', data.data.length, 'total')
+        const unread = data.data.filter((n: any) => !n.read).length
+        console.log('[ADMIN-SIDEBAR] 🔔 Unread count:', unread)
+        setUnreadCount(unread)
+      } else {
+        console.log('[ADMIN-SIDEBAR] ❌ Response not ok:', await response.text())
+      }
+    } catch (error) {
+      console.error('[ADMIN-SIDEBAR] ❌ Failed to fetch notifications:', error)
+    }
+  }
 
   const renderIcon = (key: string) => {
     switch (key) {
@@ -105,7 +144,20 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
       <div className="flex flex-col justify-between h-full">
         <div>
           <div className="p-6 border-b border-b-[#6f453f]">
-            <h2 className="font-display text-2xl">EL-Bayader Admin</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-2xl">EL-Bayader Admin</h2>
+              <button 
+                onClick={() => onSelect && onSelect('Notifications')}
+                className="relative hover:opacity-80 transition-opacity"
+              >
+                <Bell className="h-6 w-6 text-[#f3e9e5]" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           <nav className="p-4">

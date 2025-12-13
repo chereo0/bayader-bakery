@@ -59,13 +59,33 @@ const StaffMaterialsPage: React.FC = () => {
       if (response.data.success) {
         // Backend returns { success: true, data: { materials: [...], pagination: {...} } }
         const materialsData = response.data.data?.materials
-        const materialsArray = Array.isArray(materialsData) ? materialsData : []
-        setMaterials(materialsArray)
-        setError(null)
+        
+        if (!materialsData || !Array.isArray(materialsData)) {
+          setError('Invalid data format received from server')
+          setMaterials([])
+          console.error('Invalid materials data:', response.data)
+        } else if (materialsData.length === 0) {
+          setError('No materials found. Please ask admin to add materials to the system.')
+          setMaterials([])
+        } else {
+          setMaterials(materialsData)
+          setError(null)
+        }
+      } else {
+        setError(response.data.message || 'Failed to load materials')
+        setMaterials([])
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load materials')
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to load materials'
+      setError(errorMessage)
       console.error('Error fetching materials:', err)
+      
+      // Additional debugging information
+      if (err.response) {
+        console.error('Response status:', err.response.status)
+        console.error('Response data:', err.response.data)
+      }
+      
       setMaterials([]) // Ensure materials is always an array even on error
     } finally {
       setLoading(false)

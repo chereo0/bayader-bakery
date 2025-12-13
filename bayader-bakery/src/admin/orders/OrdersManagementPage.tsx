@@ -56,6 +56,11 @@ const OrdersManagementPage: React.FC = () => {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!selectedOrder || !token) return
+    console.log('[ADMIN-ORDER] 🔄 Changing order status:', {
+      orderId: selectedOrder._id,
+      oldStatus: selectedOrder.status,
+      newStatus
+    })
     try {
       const headers = {
         Authorization: `Bearer ${token}`,
@@ -66,16 +71,21 @@ const OrdersManagementPage: React.FC = () => {
         headers,
         body: JSON.stringify({ status: newStatus }),
       })
+      console.log('[ADMIN-ORDER] 🔄 Response status:', res.status)
       if (res.ok) {
         const j = await res.json()
+        console.log('[ADMIN-ORDER] ✅ Order status updated:', j)
         if (j.success) {
           setOrders(orders.map(o => (o._id === selectedOrder._id ? j.data : o)))
           setShowModal(false)
           setSelectedOrder(null)
         }
+      } else {
+        const errorText = await res.text()
+        console.error('[ADMIN-ORDER] ❌ Failed to update status:', errorText)
       }
     } catch (err) {
-      console.error('Failed to update order status', err)
+      console.error('[ADMIN-ORDER] ❌ Error updating order status:', err)
     }
   }
 

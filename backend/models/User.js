@@ -33,6 +33,50 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  savedAddresses: [{
+    label: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    line1: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    line2: {
+      type: String,
+      trim: true
+    },
+    city: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    postalCode: {
+      type: String,
+      trim: true
+    },
+    country: {
+      type: String,
+      required: true,
+      default: 'Saudi Arabia',
+      trim: true
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    isDefault: {
+      type: Boolean,
+      default: false
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   department: {
     type: String,
     enum: ['Production', 'Delivery', 'Quality Control', 'Management'],

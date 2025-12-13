@@ -3,6 +3,7 @@ const router = express.Router();
 const CustomOrderRequest = require("../models/CustomOrderRequest");
 const User = require("../models/User");
 const { sendCustomOrderRequestEmail } = require("../services/emailService");
+const { sendNotifications } = require("../utils/notificationHelper");
 const auth = require("../middleware/auth");
 const requireRole = require("../middleware/requireRole");
 
@@ -58,16 +59,11 @@ router.post("/", auth, async (req, res) => {
     // Send confirmation email (don't wait for it)
     sendCustomOrderRequestEmail(user, request);
 
-    // Create notification
+    // Send notifications to customer and admin
     try {
-      const Notification = require("../models/Notification");
-      await Notification.create({
-        userId: req.user.id,
-        title: "Custom Order Request Received",
-        message: `Your custom order request has been received. We'll review it and contact you soon.`,
-        type: "custom-order",
-        relatedId: request._id,
-      });
+      // Add user to request object for notification helper
+      request.user = req.user.id;
+      await sendNotifications('customOrderReceived', request);
     } catch (notifError) {
       console.error("Error creating notification:", notifError);
     }
@@ -178,26 +174,13 @@ router.patch("/:id", auth, requireRole("admin"), async (req, res) => {
 
     await request.save();
 
-    // Create notification for status change
+    // Send notification for status change
     try {
-      const Notification = require("../models/Notification");
-      const statusMessages = {
-        approved: "Your custom order request has been approved!",
-        rejected: "Your custom order request could not be approved.",
-        "in-progress": "Your custom order is now being prepared!",
-        completed: "Your custom order is ready!",
-        pending: "Your custom order request is being reviewed.",
-      };
-
-      await Notification.create({
-        userId: request.customerId,
-        title: "Custom Order Update",
-        message:
-          statusMessages[status] ||
-          `Your custom order status has been updated to ${status}`,
-        type: "custom-order",
-        relatedId: request._id,
-      });
+      if (status) {
+        // Add user to request object for notification helper
+        request.user = request.customerId;
+        await sendNotifications('customOrderStatusChanged', request, { newStatus: status });
+      }
     } catch (notifError) {
       console.error("Error creating notification:", notifError);
     }

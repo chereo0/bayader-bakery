@@ -1,24 +1,49 @@
-import { useState, useEffect } from "react";
-import { Bell, CheckCircle2, AlertCircle, Info } from "lucide-react";
-import Toast from "./Toast";
+import React, { useState, useEffect } from "react";
+import { Bell, Trash2, CheckCircle } from "lucide-react";
 
 interface Notification {
   _id: string;
   title: string;
   message: string;
-  type: string;
+  type: "alert" | "info" | "warning" | "success" | "error";
+  category: string;
   read: boolean;
   createdAt: string;
-  relatedId?: string;
+  action?: {
+    url: string;
+    label: string;
+  };
 }
 
-export default function NotificationsPage() {
+interface Toast {
+  type: "success" | "error" | "info";
+  message: string;
+}
+
+const Toast: React.FC<{ type: "success" | "error" | "info"; message: string; onClose: () => void }> = ({
+  type,
+  message,
+  onClose,
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
+
+  return (
+    <div className={`fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50`}>
+      {message}
+    </div>
+  );
+};
+
+const AdminNotificationsPage: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [toast, setToast] = useState<{ type: string; message: string } | null>(
-    null
-  );
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -27,15 +52,12 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      setError("");
-
       const token = localStorage.getItem("token");
       if (!token) {
-        throw new Error("Not authenticated");
+        throw new Error("No authentication token found");
       }
 
       const response = await fetch("/api/notifications/me", {
-        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
           "Cache-Control": "no-cache",
@@ -141,10 +163,7 @@ export default function NotificationsPage() {
         throw new Error("Failed to delete notification");
       }
 
-      setNotifications(
-        notifications.filter((n) => n._id !== notificationId)
-      );
-
+      setNotifications(notifications.filter((n) => n._id !== notificationId));
       setToast({ type: "success", message: "Notification deleted" });
     } catch (err) {
       setToast({
@@ -156,14 +175,15 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "order":
-        return <CheckCircle2 className="w-5 h-5 text-blue-500" />;
-      case "booking":
-        return <AlertCircle className="w-5 h-5 text-purple-500" />;
-      case "custom-order":
-        return <Info className="w-5 h-5 text-amber-500" />;
+      case "success":
+        return <CheckCircle className="w-6 h-6 text-green-600" />;
+      case "error":
+      case "alert":
+        return <Bell className="w-6 h-6 text-red-600" />;
+      case "warning":
+        return <Bell className="w-6 h-6 text-yellow-600" />;
       default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
+        return <Bell className="w-6 h-6 text-blue-600" />;
     }
   };
 
@@ -183,12 +203,12 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+            <h1 className="text-3xl font-bold text-[#5E372E] flex items-center">
               <Bell className="w-8 h-8 mr-3 text-blue-600" />
               Notifications
             </h1>
@@ -218,7 +238,7 @@ export default function NotificationsPage() {
             <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">No notifications yet</p>
             <p className="text-gray-400">
-              You'll see notifications about orders, bookings, and custom requests here.
+              You'll see notifications about orders, custom requests, and system alerts here.
             </p>
           </div>
         ) : (
@@ -298,4 +318,6 @@ export default function NotificationsPage() {
       )}
     </div>
   );
-}
+};
+
+export default AdminNotificationsPage;

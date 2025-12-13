@@ -201,10 +201,10 @@ const SignupPage: React.FC = () => {
                     value={form.firstName}
                     onChange={onChange}
                     className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]"
-                    aria-invalid={!!errors.firstName}
+                    aria-describedby={errors.firstName ? "firstName-error" : undefined}
                   />
                   {errors.firstName && (
-                    <p className="text-rose-600 text-xs mt-1">
+                    <p id="firstName-error" className="text-rose-600 text-xs mt-1" role="alert">
                       {errors.firstName}
                     </p>
                   )}
@@ -224,10 +224,10 @@ const SignupPage: React.FC = () => {
                     value={form.lastName}
                     onChange={onChange}
                     className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]"
-                    aria-invalid={!!errors.lastName}
+                    aria-describedby={errors.lastName ? "lastName-error" : undefined}
                   />
                   {errors.lastName && (
-                    <p className="text-rose-600 text-xs mt-1">
+                    <p id="lastName-error" className="text-rose-600 text-xs mt-1" role="alert">
                       {errors.lastName}
                     </p>
                   )}
@@ -248,10 +248,10 @@ const SignupPage: React.FC = () => {
                     onChange={onChange}
                     type="email"
                     className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]"
-                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? "email-error" : undefined}
                   />
                   {errors.email && (
-                    <p className="text-rose-600 text-xs mt-1">{errors.email}</p>
+                    <p id="email-error" className="text-rose-600 text-xs mt-1" role="alert">{errors.email}</p>
                   )}
                 </div>
               </div>
@@ -291,10 +291,10 @@ const SignupPage: React.FC = () => {
                     onChange={onChange}
                     type="password"
                     className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]"
-                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? "password-error" : undefined}
                   />
                   {errors.password && (
-                    <p className="text-rose-600 text-xs mt-1">
+                    <p id="password-error" className="text-rose-600 text-xs mt-1" role="alert">
                       {errors.password}
                     </p>
                   )}
@@ -315,10 +315,10 @@ const SignupPage: React.FC = () => {
                     onChange={onChange}
                     type="password"
                     className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]"
-                    aria-invalid={!!errors.confirm}
+                    aria-describedby={errors.confirm ? "confirm-error" : undefined}
                   />
                   {errors.confirm && (
-                    <p className="text-rose-600 text-xs mt-1">
+                    <p id="confirm-error" className="text-rose-600 text-xs mt-1" role="alert">
                       {errors.confirm}
                     </p>
                   )}
@@ -350,13 +350,7 @@ const SignupPage: React.FC = () => {
 
         {/* Footer showcase */}
         <footer 
-          className="mt-14 rounded-xl overflow-hidden"
-          style={{
-            backgroundImage: 'url(/images/bg.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
+          className="mt-14 rounded-xl overflow-hidden bg-[url('/images/bg.png')] bg-cover bg-center bg-no-repeat"
         >
           <div className="bg-white/70 backdrop-blur-sm p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>

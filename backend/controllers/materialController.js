@@ -1,9 +1,9 @@
 const Material = require('../models/Material');
 const Product = require('../models/Product');
 
-// @desc    Get all materials (admin only)
+// @desc    Get all materials (readable by authenticated users)
 // @route   GET /api/materials
-// @access  Private/Admin
+// @access  Private (Staff can read, Admin can write)
 const getMaterials = async (req, res) => {
   const { search, isActive, page = 1, limit = 20, sort = 'name' } = req.query;
 
@@ -28,6 +28,8 @@ const getMaterials = async (req, res) => {
     .lean();
 
   const total = await Material.countDocuments(query);
+
+  console.log(`[MATERIALS] User ${req.user?.email} fetched ${materials.length} materials (Total: ${total})`);
 
   res.json({
     success: true,

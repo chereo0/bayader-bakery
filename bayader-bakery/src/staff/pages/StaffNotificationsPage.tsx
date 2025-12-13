@@ -1,24 +1,49 @@
-import { useState, useEffect } from "react";
-import { Bell, CheckCircle2, AlertCircle, Info } from "lucide-react";
-import Toast from "./Toast";
+import React, { useState, useEffect } from "react";
+import { Bell, Trash2, CheckCircle } from "lucide-react";
 
 interface Notification {
   _id: string;
   title: string;
   message: string;
-  type: string;
+  type: "alert" | "info" | "warning" | "success" | "error";
+  category: string;
   read: boolean;
   createdAt: string;
-  relatedId?: string;
+  action?: {
+    url: string;
+    label: string;
+  };
 }
 
-export default function NotificationsPage() {
+interface Toast {
+  type: "success" | "error" | "info";
+  message: string;
+}
+
+const Toast: React.FC<{ type: "success" | "error" | "info"; message: string; onClose: () => void }> = ({
+  type,
+  message,
+  onClose,
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
+
+  return (
+    <div className={`fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50`}>
+      {message}
+    </div>
+  );
+};
+
+const StaffNotificationsPage: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [toast, setToast] = useState<{ type: string; message: string } | null>(
-    null
-  );
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -27,15 +52,12 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      setError("");
-
       const token = localStorage.getItem("token");
       if (!token) {
-        throw new Error("Not authenticated");
+        throw new Error("No authentication token found");
       }
 
       const response = await fetch("/api/notifications/me", {
-        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
           "Cache-Control": "no-cache",
@@ -141,10 +163,7 @@ export default function NotificationsPage() {
         throw new Error("Failed to delete notification");
       }
 
-      setNotifications(
-        notifications.filter((n) => n._id !== notificationId)
-      );
-
+      setNotifications(notifications.filter((n) => n._id !== notificationId));
       setToast({ type: "success", message: "Notification deleted" });
     } catch (err) {
       setToast({
@@ -156,19 +175,20 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "order":
-        return <CheckCircle2 className="w-5 h-5 text-blue-500" />;
-      case "booking":
-        return <AlertCircle className="w-5 h-5 text-purple-500" />;
-      case "custom-order":
-        return <Info className="w-5 h-5 text-amber-500" />;
+      case "success":
+        return <CheckCircle className="w-6 h-6 text-green-600" />;
+      case "error":
+      case "alert":
+        return <Bell className="w-6 h-6 text-red-600" />;
+      case "warning":
+        return <Bell className="w-6 h-6 text-yellow-600" />;
       default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
+        return <Bell className="w-6 h-6 text-blue-600" />;
     }
   };
 
   const getNotificationBgColor = (read: boolean) => {
-    return read ? "bg-white" : "bg-blue-50";
+    return read ? "bg-white dark:bg-gray-800" : "bg-blue-50 dark:bg-blue-900/20";
   };
 
   if (loading) {
@@ -176,19 +196,19 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading notifications...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading notifications...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
               <Bell className="w-8 h-8 mr-3 text-blue-600" />
               Notifications
             </h1>
@@ -201,13 +221,13 @@ export default function NotificationsPage() {
               </button>
             )}
           </div>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
             {error}
           </div>
         )}
@@ -215,10 +235,10 @@ export default function NotificationsPage() {
         {/* Notifications List */}
         {notifications.length === 0 ? (
           <div className="text-center py-12">
-            <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No notifications yet</p>
-            <p className="text-gray-400">
-              You'll see notifications about orders, bookings, and custom requests here.
+            <Bell className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 text-lg">No notifications yet</p>
+            <p className="text-gray-400 dark:text-gray-500">
+              You'll see notifications about orders, production, and inventory here.
             </p>
           </div>
         ) : (
@@ -226,7 +246,7 @@ export default function NotificationsPage() {
             {notifications.map((notification) => (
               <div
                 key={notification._id}
-                className={`p-4 rounded-lg border border-gray-200 transition-all ${getNotificationBgColor(
+                className={`p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-all ${getNotificationBgColor(
                   notification.read
                 )} hover:shadow-md`}
               >
@@ -238,14 +258,14 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">
                           {notification.title}
                         </h3>
-                        <p className="text-gray-700 mt-1">
+                        <p className="text-gray-700 dark:text-gray-300 mt-1">
                           {notification.message}
                         </p>
                         {(notification as any).actorName && (
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             <span className="font-medium">By:</span> {(notification as any).actorName}
                           </p>
                         )}
@@ -256,7 +276,7 @@ export default function NotificationsPage() {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between">
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(notification.createdAt).toLocaleDateString()}{" "}
                         {new Date(notification.createdAt).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -268,14 +288,14 @@ export default function NotificationsPage() {
                         {!notification.read && (
                           <button
                             onClick={() => markAsRead(notification._id)}
-                            className="text-sm px-3 py-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                            className="text-sm px-3 py-1 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors"
                           >
                             Mark as read
                           </button>
                         )}
                         <button
                           onClick={() => deleteNotification(notification._id)}
-                          className="text-sm px-3 py-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                          className="text-sm px-3 py-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
                         >
                           Delete
                         </button>
@@ -298,4 +318,6 @@ export default function NotificationsPage() {
       )}
     </div>
   );
-}
+};
+
+export default StaffNotificationsPage;

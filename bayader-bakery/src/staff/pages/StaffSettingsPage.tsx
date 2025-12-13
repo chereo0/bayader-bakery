@@ -68,14 +68,6 @@ const StaffSettingsPage: React.FC = () => {
 
   useEffect(() => {
     fetchProfile()
-    // Apply theme immediately on mount
-    const savedTheme = localStorage.getItem('theme') || 'light'
-    const htmlElement = document.documentElement
-    if (savedTheme === 'dark') {
-      htmlElement.classList.add('dark')
-    } else {
-      htmlElement.classList.remove('dark')
-    }
   }, [])
 
   // Apply theme changes to DOM and save to localStorage
@@ -111,15 +103,6 @@ const StaffSettingsPage: React.FC = () => {
 
       console.log('🔄 Fetching profile...')
 
-      // Load theme from localStorage first
-      const savedTheme = localStorage.getItem('theme') || 'light'
-      const htmlElement = document.documentElement
-      if (savedTheme === 'dark') {
-        htmlElement.classList.add('dark')
-      } else {
-        htmlElement.classList.remove('dark')
-      }
-
       const response = await axios.get(`${API_BASE_URL}/users/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -149,10 +132,13 @@ const StaffSettingsPage: React.FC = () => {
           department: profileData.department || ''
         })
 
-        const theme = userData.preferences?.theme || localStorage.getItem('theme') || 'light'
+        // Only update theme if it exists in user preferences, otherwise keep current theme
+        const currentTheme = localStorage.getItem('theme') || 'light'
+        const userTheme = userData.preferences?.theme || currentTheme
+        
         setPreferencesForm(prev => ({
           ...prev,
-          theme: theme,
+          theme: userTheme,
           timezone: userData.preferences?.timezone || 'UTC+3',
           emailNotifications: userData.notifications?.email !== false,
           pushNotifications: userData.notifications?.push !== false

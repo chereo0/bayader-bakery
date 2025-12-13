@@ -29,7 +29,10 @@ interface Order {
   items: OrderItem[]
   totalAmount: number
   status: 'pending' | 'confirmed' | 'preparing' | 'out-for-delivery' | 'delivered' | 'cancelled'
-  deliveryAddress: DeliveryAddress
+  isPickup?: boolean
+  pickupLocation?: string
+  phone?: string
+  deliveryAddress?: DeliveryAddress
   payment: Payment
   createdAt: string
   updatedAt: string
@@ -157,21 +160,41 @@ export default function OrderDetailsModal({
             </div>
           </div>
 
-          {/* Delivery Address */}
+          {/* Delivery/Pickup Information */}
           <div className="mb-6 pb-6 border-b border-bakery-200">
-            <h3 className="text-lg font-semibold text-bakery-900 mb-3">Delivery Address</h3>
-            <div className="bg-bakery-50 p-4 rounded-lg">
-              <p className="text-bakery-900">{order.deliveryAddress.line1}</p>
-              {order.deliveryAddress.line2 && (
-                <p className="text-bakery-900">{order.deliveryAddress.line2}</p>
-              )}
-              <p className="text-bakery-900">
-                {order.deliveryAddress.city}
-                {order.deliveryAddress.postalCode && `, ${order.deliveryAddress.postalCode}`}
-              </p>
-              <p className="text-bakery-900">{order.deliveryAddress.country}</p>
-              <p className="text-bakery-900 mt-2">📞 {order.deliveryAddress.phone}</p>
-            </div>
+            {order.isPickup ? (
+              <>
+                <h3 className="text-lg font-semibold text-bakery-900 mb-3">🏪 Pickup Location</h3>
+                <div className="bg-bakery-50 p-4 rounded-lg">
+                  <p className="text-bakery-900 font-medium text-base mb-2">{order.pickupLocation}</p>
+                  <p className="text-bakery-900 mt-2">📞 {order.phone}</p>
+                  <p className="text-bakery-600 text-sm mt-3">We'll notify you when your order is ready for pickup</p>
+                </div>
+              </>
+            ) : order.deliveryAddress ? (
+              <>
+                <h3 className="text-lg font-semibold text-bakery-900 mb-3">🚚 Delivery Address</h3>
+                <div className="bg-bakery-50 p-4 rounded-lg">
+                  <p className="text-bakery-900">{order.deliveryAddress.line1}</p>
+                  {order.deliveryAddress.line2 && (
+                    <p className="text-bakery-900">{order.deliveryAddress.line2}</p>
+                  )}
+                  <p className="text-bakery-900">
+                    {order.deliveryAddress.city}
+                    {order.deliveryAddress.postalCode && `, ${order.deliveryAddress.postalCode}`}
+                  </p>
+                  <p className="text-bakery-900">{order.deliveryAddress.country}</p>
+                  <p className="text-bakery-900 mt-2">📞 {order.deliveryAddress.phone}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-bakery-900 mb-3">Order Information</h3>
+                <div className="bg-bakery-50 p-4 rounded-lg">
+                  <p className="text-bakery-700">No delivery or pickup information available</p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Payment Info */}

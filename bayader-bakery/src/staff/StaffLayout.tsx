@@ -8,6 +8,7 @@ import StaffMessagesPage from './pages/StaffMessagesPage'
 import StaffEventsPage from './pages/StaffEventsPage'
 import StaffMaterialsPage from './pages/StaffMaterialsPage'
 import StaffSettingsPage from './pages/StaffSettingsPage'
+import StaffNotificationsPage from './pages/StaffNotificationsPage'
 
 const StaffLayout: React.FC = () => {
   const location = useLocation()
@@ -22,6 +23,7 @@ const StaffLayout: React.FC = () => {
     if (path.includes('/staff/materials')) return 'Materials'
     if (path.includes('/staff/settings')) return 'Settings'
     if (path.includes('/staff/events')) return 'Events'
+    if (path.includes('/staff/notifications')) return 'Notifications'
     return 'Dashboard'
   }
 
@@ -63,6 +65,9 @@ const StaffLayout: React.FC = () => {
         break
       case 'Events':
         navigate('/staff/events')
+        break
+      case 'Notifications':
+        navigate('/staff/notifications')
         break
       default:
         navigate('/staff')
@@ -121,18 +126,20 @@ const StaffLayout: React.FC = () => {
         return <StaffSettingsPage />
       case 'Events':
         return <StaffEventsPage />
+      case 'Notifications':
+        return <StaffNotificationsPage />
       default:
         return <StaffOverview onSelectTab={setSelectedTab} />
     }
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <StaffNavbar />
       <div className="flex">
         <StaffLayoutSidebar selected={selectedTab} onSelect={handleTabSelect} />
-        <div className="flex-1">
-          <main className="p-6 max-w-7xl mx-auto">
+        <div className="flex-1 min-h-screen">
+          <main className="p-6 max-w-7xl mx-auto w-full">
             {renderContent()}
           </main>
         </div>

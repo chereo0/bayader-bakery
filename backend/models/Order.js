@@ -47,7 +47,16 @@ const orderSchema = new mongoose.Schema({
   },
   estimatedDeliveryDate: { type: Date },
   actualDeliveryDate: { type: Date },
-  deliveryAddress: { type: addressSchema, required: true },
+  // Order type: delivery or pickup
+  isPickup: { type: Boolean, default: false },
+  pickupLocation: { type: String }, // Store location for pickup orders
+  phone: { type: String }, // Phone number for pickup orders
+  deliveryAddress: { 
+    type: addressSchema, 
+    required: function() { 
+      return !this.isPickup; // Only required for delivery orders
+    }
+  },
   payment: {
     method: { type: String, enum: ['cash', 'card', 'online'], default: 'cash' },
     paid: { type: Boolean, default: false },

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 import { useNavigate } from 'react-router-dom'
 import Button from './ui/Button'
 import OrderDetailsModal from './OrderDetailsModal'
@@ -15,7 +16,10 @@ interface Order {
   }>
   totalAmount: number
   status: 'pending' | 'confirmed' | 'preparing' | 'out-for-delivery' | 'delivered' | 'cancelled'
-  deliveryAddress: {
+  isPickup?: boolean
+  pickupLocation?: string
+  phone?: string
+  deliveryAddress?: {
     line1: string
     line2?: string
     city: string
@@ -34,6 +38,7 @@ interface Order {
 
 export default function MyOrdersPage() {
   const { user, isAuthenticated } = useAuth()
+  const { addItem, clearCart } = useCart()
   const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,6 +47,7 @@ export default function MyOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -117,6 +123,34 @@ export default function MyOrdersPage() {
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order)
     setShowModal(true)
+  }
+
+  const handleReorder = async (order: Order) => {
+    try {
+      setReorderingOrderId(order._id)
+      
+      // Clear current cart and add all items from the order
+      clearCart()
+      
+      // Add each item to cart
+      for (const item of order.items) {
+        addItem({
+          id: item.product,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image
+        })
+      }
+      
+      alert(`${order.items.length} item(s) added to cart!`)
+      navigate('/cart')
+    } catch (error) {
+      console.error('Error reordering:', error)
+      alert('Failed to add items to cart')
+    } finally {
+      setReorderingOrderId(null)
+    }
   }
 
   const handleCancelOrder = async (orderId: string) => {
@@ -307,16 +341,29 @@ export default function MyOrdersPage() {
                 {/* Order Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-4 border-b border-bakery-200">
                   <div>
-                    <p className="text-xs text-bakery-600 font-semibold">DELIVERY ADDRESS</p>
-                    <p className="text-sm text-bakery-900">
-                      {order.deliveryAddress.line1}
-                      {order.deliveryAddress.line2 && <>, {order.deliveryAddress.line2}</>}
-                    </p>
-                    <p className="text-sm text-bakery-900">
-                      {order.deliveryAddress.city}, {order.deliveryAddress.postalCode}
-                    </p>
-                    <p className="text-sm text-bakery-900">{order.deliveryAddress.country}</p>
-                    <p className="text-sm text-bakery-900">📞 {order.deliveryAddress.phone}</p>
+                    {order.isPickup ? (
+                      <>
+                        <p className="text-xs text-bakery-600 font-semibold">🏪 PICKUP LOCATION</p>
+                        <p className="text-sm text-bakery-900 font-medium">{order.pickupLocation}</p>
+                        <p className="text-sm text-bakery-900 mt-2">📞 {order.phone}</p>
+                        <p className="text-xs text-bakery-600 mt-2">We'll notify you when your order is ready for pickup</p>
+                      </>
+                    ) : order.deliveryAddress ? (
+                      <>
+                        <p className="text-xs text-bakery-600 font-semibold">🚚 DELIVERY ADDRESS</p>
+                        <p className="text-sm text-bakery-900">
+                          {order.deliveryAddress.line1}
+                          {order.deliveryAddress.line2 && <>, {order.deliveryAddress.line2}</>}
+                        </p>
+                        <p className="text-sm text-bakery-900">
+                          {order.deliveryAddress.city}, {order.deliveryAddress.postalCode}
+                        </p>
+                        <p className="text-sm text-bakery-900">{order.deliveryAddress.country}</p>
+                        <p className="text-sm text-bakery-900">📞 {order.deliveryAddress.phone}</p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-bakery-700">No address information</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-bakery-600 font-semibold">PAYMENT METHOD</p>
@@ -335,18 +382,27 @@ export default function MyOrdersPage() {
                   <div className="text-xl font-bold text-bakery-900 mb-3 md:mb-0">
                     Total: ${order.totalAmount.toFixed(2)}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      variant="ghost"
+                      className="text-sm"
+                      onClick={() => handleReorder(order)}
+                      disabled={reorderingOrderId === order._id}
+                    >
+                      {reorderingOrderId === order._id ? '🔄 Adding...' : '🔄 Reorder'}
+                    </Button>
                     {order.status === 'pending' && (
                       <Button 
                         variant="ghost" 
-                        className="text-sm"
+                        className="text-sm text-red-600 hover:bg-red-50"
                         onClick={() => {
                           if (window.confirm('Are you sure you want to cancel this order? Stock will be restored.')) {
                             handleCancelOrder(order._id)
                           }
                         }}
+                        disabled={isCancelling}
                       >
-                        Cancel Order
+                        {isCancelling ? 'Cancelling...' : 'Cancel Order'}
                       </Button>
                     )}
                     <Button 

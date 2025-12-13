@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
@@ -6,12 +6,31 @@ import Button from './ui/Button'
 import Card from './ui/Card'
 import Input from './ui/Input'
 
+interface SavedAddress {
+  _id: string
+  label: string
+  line1: string
+  line2?: string
+  city: string
+  postalCode?: string
+  country: string
+  phone: string
+  isDefault: boolean
+}
+
 const CartPage: React.FC = () => {
   const { items, updateQuantity, removeItem, clearCart } = useCart()
   const { isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery')
+  const [pickupLocation, setPickupLocation] = useState('')
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('')
+  const [useNewAddress, setUseNewAddress] = useState(false)
+  const [showSaveAddress, setShowSaveAddress] = useState(false)
+  const [newAddressLabel, setNewAddressLabel] = useState('')
   const [checkoutData, setCheckoutData] = useState({
     line1: '',
     line2: '',
@@ -29,6 +48,108 @@ const CartPage: React.FC = () => {
   const discount = (subtotal * discountPercent) / 100
   const tax = (subtotal - discount) * 0.1
   const total = subtotal - discount + tax
+
+  // Fetch saved addresses when component mounts
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchSavedAddresses()
+    }
+  }, [isAuthenticated])
+
+  const fetchSavedAddresses = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me/addresses`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      const data = await response.json()
+      if (data.success) {
+        setSavedAddresses(data.data)
+        // Select default address if available
+        const defaultAddr = data.data.find((addr: SavedAddress) => addr.isDefault)
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr._id)
+          loadAddressToForm(defaultAddr)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching addresses:', error)
+    }
+  }
+
+  const loadAddressToForm = (address: SavedAddress) => {
+    setCheckoutData({
+      line1: address.line1,
+      line2: address.line2 || '',
+      city: address.city,
+      postalCode: address.postalCode || '',
+      country: address.country,
+      phone: address.phone,
+      specialInstructions: checkoutData.specialInstructions
+    })
+  }
+
+  const handleAddressSelect = (addressId: string) => {
+    setSelectedAddressId(addressId)
+    setUseNewAddress(false)
+    const address = savedAddresses.find(addr => addr._id === addressId)
+    if (address) {
+      loadAddressToForm(address)
+    }
+  }
+
+  const handleUseNewAddress = () => {
+    setUseNewAddress(true)
+    setSelectedAddressId('')
+    setCheckoutData({
+      line1: '',
+      line2: '',
+      city: '',
+      postalCode: '',
+      country: '',
+      phone: '',
+      specialInstructions: checkoutData.specialInstructions
+    })
+  }
+
+  const saveCurrentAddress = async () => {
+    if (!newAddressLabel) {
+      alert('Please enter a label for this address')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/users/me/addresses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          label: newAddressLabel,
+          line1: checkoutData.line1,
+          line2: checkoutData.line2,
+          city: checkoutData.city,
+          postalCode: checkoutData.postalCode,
+          country: checkoutData.country,
+          phone: checkoutData.phone
+        })
+      })
+      const data = await response.json()
+      if (data.success) {
+        alert('Address saved successfully!')
+        setShowSaveAddress(false)
+        setNewAddressLabel('')
+        fetchSavedAddresses()
+      }
+    } catch (error) {
+      console.error('Error saving address:', error)
+      alert('Failed to save address')
+    }
+  }
 
   const handleApplyCoupon = () => {
     if (couponInput.toUpperCase() === 'SAVE10') {
@@ -54,9 +175,17 @@ const CartPage: React.FC = () => {
       return
     }
 
-    if (!checkoutData.line1 || !checkoutData.city || !checkoutData.country || !checkoutData.phone) {
-      alert('Please fill all required fields')
-      return
+    // Validate based on order type
+    if (orderType === 'delivery') {
+      if (!checkoutData.line1 || !checkoutData.city || !checkoutData.country || !checkoutData.phone) {
+        alert('Please fill all required delivery fields')
+        return
+      }
+    } else {
+      if (!pickupLocation || !checkoutData.phone) {
+        alert('Please select a pickup location and provide your phone number')
+        return
+      }
     }
 
     if (items.length === 0) {
@@ -69,23 +198,34 @@ const CartPage: React.FC = () => {
     try {
       const token = localStorage.getItem('token')
       
-      const orderPayload = {
+      const orderPayload: any = {
         items: items.map(item => ({
           productId: item.id.toString(),
           quantity: item.quantity
         })),
-        deliveryAddress: {
+        isPickup: orderType === 'pickup',
+        payment: {
+          method: 'cash',
+          paid: false
+        }
+      }
+
+      if (orderType === 'delivery') {
+        orderPayload.deliveryAddress = {
           line1: checkoutData.line1,
           line2: checkoutData.line2 || undefined,
           city: checkoutData.city,
           postalCode: checkoutData.postalCode || undefined,
           country: checkoutData.country,
           phone: checkoutData.phone,
-        },
-        payment: {
-          method: 'cash',
-          paid: false
         }
+      } else {
+        orderPayload.pickupLocation = pickupLocation
+        orderPayload.phone = checkoutData.phone
+      }
+
+      if (checkoutData.specialInstructions) {
+        orderPayload.specialInstructions = checkoutData.specialInstructions
       }
 
       // Log for debugging
@@ -108,6 +248,11 @@ const CartPage: React.FC = () => {
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to place order')
+      }
+
+      // Save address if requested
+      if (showSaveAddress && orderType === 'delivery' && useNewAddress && newAddressLabel) {
+        await saveCurrentAddress()
       }
 
       alert(`Order placed successfully!\nOrder ID: ${data.data._id.slice(-8).toUpperCase()}\nTotal: $${total.toFixed(2)}\n\nThank you for your order!`)
@@ -305,9 +450,101 @@ const CartPage: React.FC = () => {
       {showCheckoutModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-display text-bakery-900 mb-4">Delivery Information</h2>
+            <h2 className="text-2xl font-display text-bakery-900 mb-4">Order Information</h2>
 
             <div className="space-y-4 mb-6">
+              {/* Order Type Selector */}
+              <div>
+                <label className="block text-sm font-medium text-bakery-900 mb-2">Order Type *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setOrderType('delivery')}
+                    className={`px-4 py-3 rounded-md border-2 font-medium transition-all ${
+                      orderType === 'delivery'
+                        ? 'border-bakery-700 bg-bakery-50 text-bakery-900'
+                        : 'border-bakery-200 bg-white text-bakery-700 hover:border-bakery-400'
+                    }`}
+                  >
+                    🚚 Delivery
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderType('pickup')}
+                    className={`px-4 py-3 rounded-md border-2 font-medium transition-all ${
+                      orderType === 'pickup'
+                        ? 'border-bakery-700 bg-bakery-50 text-bakery-900'
+                        : 'border-bakery-200 bg-white text-bakery-700 hover:border-bakery-400'
+                    }`}
+                  >
+                    🏪 Pickup
+                  </button>
+                </div>
+              </div>
+
+              {/* Pickup Location Selector */}
+              {orderType === 'pickup' && (
+                <div>
+                  <label className="block text-sm font-medium text-bakery-900 mb-1">Pickup Location *</label>
+                  <select
+                    value={pickupLocation}
+                    onChange={(e) => setPickupLocation(e.target.value)}
+                    title="Select pickup location"
+                    aria-label="Pickup location"
+                    className="w-full px-3 py-2 border border-bakery-200 rounded-md focus:outline-none focus:ring-2 focus:ring-bakery-700 text-sm"
+                  >
+                    <option value="">Select a location</option>
+                    <option value="main-store">Main Store - 123 Bakery Street, Downtown</option>
+                    <option value="west-branch">West Branch - 456 Oak Avenue, West District</option>
+                    <option value="east-branch">East Branch - 789 Maple Road, East Side</option>
+                  </select>
+                  <p className="text-xs text-bakery-600 mt-1">We'll notify you when your order is ready for pickup</p>
+                </div>
+              )}
+
+              {/* Saved Addresses - Only show for delivery */}
+              {orderType === 'delivery' && savedAddresses.length > 0 && !useNewAddress && (
+                <div>
+                  <label className="block text-sm font-medium text-bakery-900 mb-2">Select Address *</label>
+                  <div className="space-y-2 mb-3">
+                    {savedAddresses.map(addr => (
+                      <button
+                        key={addr._id}
+                        type="button"
+                        onClick={() => handleAddressSelect(addr._id)}
+                        className={`w-full text-left px-3 py-2 rounded-md border-2 transition-all ${
+                          selectedAddressId === addr._id
+                            ? 'border-bakery-700 bg-bakery-50'
+                            : 'border-bakery-200 bg-white hover:border-bakery-400'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-bakery-900">{addr.label}</p>
+                            <p className="text-sm text-bakery-700">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}</p>
+                            <p className="text-sm text-bakery-700">{addr.city}, {addr.country}</p>
+                            <p className="text-sm text-bakery-600">📞 {addr.phone}</p>
+                          </div>
+                          {addr.isDefault && (
+                            <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Default</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUseNewAddress}
+                    className="text-sm text-bakery-700 hover:text-bakery-900 underline"
+                  >
+                    + Use a different address
+                  </button>
+                </div>
+              )}
+
+              {/* Delivery Address Fields - Only show for delivery and when using new address or no saved addresses */}
+              {orderType === 'delivery' && (savedAddresses.length === 0 || useNewAddress) && (
+                <>
               <div>
                 <label className="block text-sm font-medium text-bakery-900 mb-1">Address Line 1 *</label>
                 <Input 
@@ -354,6 +591,39 @@ const CartPage: React.FC = () => {
                 />
               </div>
 
+              {/* Save Address Checkbox */}
+              {!showSaveAddress && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="saveAddress"
+                    checked={showSaveAddress}
+                    onChange={(e) => setShowSaveAddress(e.target.checked)}
+                    className="w-4 h-4 text-bakery-700 border-bakery-300 rounded focus:ring-bakery-700"
+                  />
+                  <label htmlFor="saveAddress" className="text-sm text-bakery-700">
+                    Save this address for future orders
+                  </label>
+                </div>
+              )}
+
+              {/* Address Label Input */}
+              {showSaveAddress && (
+                <div>
+                  <label className="block text-sm font-medium text-bakery-900 mb-1">Address Label *</label>
+                  <Input 
+                    placeholder="e.g., Home, Work, etc."
+                    value={newAddressLabel}
+                    onChange={(e) => setNewAddressLabel((e.target as HTMLInputElement).value)}
+                  />
+                  <p className="text-xs text-bakery-600 mt-1">Give this address a name for easy selection later</p>
+                </div>
+              )}
+
+                </>
+              )}
+
+              {/* Phone Number - Always required */}
               <div>
                 <label className="block text-sm font-medium text-bakery-900 mb-1">Phone Number *</label>
                 <Input 
@@ -364,6 +634,7 @@ const CartPage: React.FC = () => {
                 />
               </div>
 
+              {/* Special Instructions - Always available */}
               <div>
                 <label className="block text-sm font-medium text-bakery-900 mb-1">Special Instructions</label>
                 <textarea 

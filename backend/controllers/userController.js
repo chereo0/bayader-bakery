@@ -227,4 +227,132 @@ const updateMyPassword = async (req, res) => {
   }
 };
 
-module.exports = { listUsers, getUser, createUser, updateUser, deleteUser, bulkDeleteUsers, getMySettings, updateMySettings, updateMyPassword };
+// GET /api/users/me/addresses - Get all saved addresses for current user
+const getMySavedAddresses = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('savedAddresses');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    res.json({ success: true, data: user.savedAddresses || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/users/me/addresses - Add a new saved address
+const addSavedAddress = async (req, res) => {
+  try {
+    const { label, line1, line2, city, postalCode, country, phone, isDefault } = req.body;
+    
+    if (!label || !line1 || !city || !phone) {
+      return res.status(400).json({ success: false, message: 'Label, address line 1, city, and phone are required' });
+    }
+    
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    // If this is set as default, unset all other defaults
+    if (isDefault) {
+      user.savedAddresses.forEach(addr => addr.isDefault = false);
+    }
+    
+    // If this is the first address, make it default
+    const makeDefault = isDefault || user.savedAddresses.length === 0;
+    
+    const newAddress = {
+      label,
+      line1,
+      line2: line2 || '',
+      city,
+      postalCode: postalCode || '',
+      country: country || 'Saudi Arabia',
+      phone,
+      isDefault: makeDefault
+    };
+    
+    user.savedAddresses.push(newAddress);
+    await user.save();
+    
+    const addedAddress = user.savedAddresses[user.savedAddresses.length - 1];
+    res.status(201).json({ success: true, data: addedAddress, message: 'Address saved successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PUT /api/users/me/addresses/:addressId - Update a saved address
+const updateSavedAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const { label, line1, line2, city, postalCode, country, phone, isDefault } = req.body;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const address = user.savedAddresses.id(addressId);
+    if (!address) return res.status(404).json({ success: false, message: 'Address not found' });
+    
+    // If setting as default, unset all other defaults
+    if (isDefault) {
+      user.savedAddresses.forEach(addr => addr.isDefault = false);
+    }
+    
+    if (label) address.label = label;
+    if (line1) address.line1 = line1;
+    if (line2 !== undefined) address.line2 = line2;
+    if (city) address.city = city;
+    if (postalCode !== undefined) address.postalCode = postalCode;
+    if (country) address.country = country;
+    if (phone) address.phone = phone;
+    if (isDefault !== undefined) address.isDefault = isDefault;
+    
+    await user.save();
+    
+    res.json({ success: true, data: address, message: 'Address updated successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// DELETE /api/users/me/addresses/:addressId - Delete a saved address
+const deleteSavedAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const address = user.savedAddresses.id(addressId);
+    if (!address) return res.status(404).json({ success: false, message: 'Address not found' });
+    
+    const wasDefault = address.isDefault;
+    address.deleteOne();
+    
+    // If deleted address was default and there are other addresses, make the first one default
+    if (wasDefault && user.savedAddresses.length > 0) {
+      user.savedAddresses[0].isDefault = true;
+    }
+    
+    await user.save();
+    
+    res.json({ success: true, message: 'Address deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { 
+  listUsers, 
+  getUser, 
+  createUser, 
+  updateUser, 
+  deleteUser, 
+  bulkDeleteUsers, 
+  getMySettings, 
+  updateMySettings, 
+  updateMyPassword,
+  getMySavedAddresses,
+  addSavedAddress,
+  updateSavedAddress,
+  deleteSavedAddress
+};

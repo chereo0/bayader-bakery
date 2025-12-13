@@ -218,9 +218,9 @@ const LoginPage: React.FC = () => {
                     onChange={onChange}
                     type="email"
                     className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]"
-                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? "email-error" : undefined}
                   />
-                  {errors.email && <p className="text-rose-600 text-xs mt-1">{errors.email}</p>}
+                  {errors.email && <p id="email-error" className="text-rose-600 text-xs mt-1" role="alert">{errors.email}</p>}
                 </div>
 
                 <div>
@@ -235,9 +235,9 @@ const LoginPage: React.FC = () => {
                     onChange={onChange}
                     type="password"
                     className="w-full rounded-md border border-[#e6dcd6] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#caa77a]"
-                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? "password-error" : undefined}
                   />
-                  {errors.password && <p className="text-rose-600 text-xs mt-1">{errors.password}</p>}
+                  {errors.password && <p id="password-error" className="text-rose-600 text-xs mt-1" role="alert">{errors.password}</p>}
                 </div>
               </div>
 
@@ -266,13 +266,7 @@ const LoginPage: React.FC = () => {
 
         {/* Footer showcase with colored div placeholders */}
         <footer 
-          className="mt-14 rounded-xl overflow-hidden"
-          style={{
-            backgroundImage: 'url(/images/bg.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
+          className="mt-14 rounded-xl overflow-hidden bg-[url('/images/bg.png')] bg-cover bg-center bg-no-repeat"
         >
           <div className="bg-white/70 backdrop-blur-sm p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>

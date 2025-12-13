@@ -7,6 +7,15 @@ const NotificationSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    actor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    actorName: {
+      type: String,
+      default: null
+    },
     type: {
       type: String,
       enum: ['alert', 'info', 'warning', 'success', 'error'],
