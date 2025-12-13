@@ -370,8 +370,11 @@ const getAllOrders = async (req, res, next) => {
 
 // Update order status (admin/staff/driver)
 const updateOrderStatus = async (req, res, next) => {
+  console.log('\n\n');
+  console.log('='.repeat(80));
   console.log('[UPDATE-ORDER-STATUS] ========== FUNCTION CALLED ==========');
   console.log('[UPDATE-ORDER-STATUS] 📥 Request:', { orderId: req.params.id, newStatus: req.body.status, userId: req.user?._id, userName: req.user?.name });
+  console.log('='.repeat(80));
   try {
     const { status } = req.body;
     const { id } = req.params;
@@ -494,19 +497,21 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     console.log('[ORDER-STATUS] 🔔 About to send notifications...');
+    console.log('[ORDER-STATUS] 🔔 sendNotifications function exists?', typeof sendNotifications);
+    console.log('[ORDER-STATUS] 🔔 Order object:', { id: order._id, orderNumber: order.orderNumber, user: order.user });
     // Send notifications to customer and staff
     try {
-      console.log('[ORDER-STATUS] 🔔 Sending notifications for orderStatusChanged:', {
+      console.log('[ORDER-STATUS] 🔔 INSIDE TRY BLOCK - Sending notifications for orderStatusChanged:', {
         orderId: order._id,
         orderNumber: order.orderNumber,
         userId: order.user,
         newStatus: status,
-        actor: req.user?.name
+        actorId: req.user?.id
       });
       await sendNotifications('orderStatusChanged', order, { 
         newStatus: status,
-        actor: req.user,
-        actorName: req.user?.name 
+        actor: req.user?.id,  // Pass ObjectId string, not full JWT object
+        actorName: req.user?.name || req.user?.email?.split('@')[0] || 'Admin'
       });
       console.log('[ORDER-STATUS] ✅ Notifications sent successfully');
     } catch (notifError) {
@@ -525,8 +530,11 @@ const updateOrderStatus = async (req, res, next) => {
       response.materialDeductions = materialDeductionResult.deductions;
     }
 
+    console.log('[UPDATE-ORDER-STATUS] 📤 Sending response to client:', { success: true, prevStatus, newStatus: status });
     res.json(response);
+    console.log('[UPDATE-ORDER-STATUS] ========== FUNCTION COMPLETED ==========\n\n');
   } catch (error) {
+    console.error('[UPDATE-ORDER-STATUS] ❌❌❌ CAUGHT ERROR:', error.message);
     logger.error('Error updating order status', error);
     next(error);
   }
@@ -939,6 +947,237 @@ const addOrderNote = async (req, res, next) => {
   }
 };
 
+// Driver: Accept order assignment
+const acceptOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const driverId = req.user.id;
+
+    const order = await Order.findById(id).populate('user', 'name email phone');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Verify this driver is assigned to this order
+    if (!order.assignedDriver || order.assignedDriver.toString() !== driverId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You are not assigned to this order' 
+      });
+    }
+
+    // Check if already accepted or rejected
+    if (order.assignmentStatus === 'accepted') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order already accepted' 
+      });
+    }
+
+    if (order.assignmentStatus === 'rejected') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot accept a rejected order' 
+      });
+    }
+
+    // Update assignment status
+    order.assignmentStatus = 'accepted';
+    order.assignmentHistory.push({
+      driver: driverId,
+      status: 'accepted',
+      timestamp: new Date()
+    });
+
+    // Update delivery status if still pending
+    if (order.deliveryStatus === 'pending' || order.deliveryStatus === 'assigned') {
+      order.deliveryStatus = 'assigned';
+    }
+
+    await order.save();
+
+    // Get driver info for notifications
+    const driver = await User.findById(driverId).select('name phone email');
+
+    // Send notifications to admin and staff
+    try {
+      await sendNotifications('orderAcceptedByDriver', order, { driver });
+    } catch (notifError) {
+      console.error('[ACCEPT-ORDER] Notification error:', notifError);
+    }
+
+    console.log(`[ACCEPT-ORDER] Driver ${driverId} accepted order ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Order accepted successfully',
+      data: order
+    });
+  } catch (error) {
+    console.error('[ACCEPT-ORDER] Error:', error);
+    next(error);
+  }
+};
+
+// Driver: Reject order assignment
+const rejectOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const driverId = req.user.id;
+
+    if (!reason || reason.trim().length < 5) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide a reason for rejection (minimum 5 characters)' 
+      });
+    }
+
+    const order = await Order.findById(id).populate('user', 'name email phone');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Verify this driver is assigned to this order
+    if (!order.assignedDriver || order.assignedDriver.toString() !== driverId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You are not assigned to this order' 
+      });
+    }
+
+    // Check if already accepted
+    if (order.assignmentStatus === 'accepted') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot reject an accepted order. Please contact admin.' 
+      });
+    }
+
+    // Update assignment status
+    order.assignmentStatus = 'rejected';
+    order.assignmentHistory.push({
+      driver: driverId,
+      status: 'rejected',
+      reason: reason.trim(),
+      timestamp: new Date()
+    });
+
+    // Unassign driver
+    order.assignedDriver = null;
+    order.deliveryStatus = 'pending';
+
+    await order.save();
+
+    // Get driver info for notifications
+    const driver = await User.findById(driverId).select('name phone email');
+
+    // Send notifications to admin and staff about rejection
+    try {
+      await sendNotifications('orderRejectedByDriver', order, { driver, reason: reason.trim() });
+    } catch (notifError) {
+      console.error('[REJECT-ORDER] Notification error:', notifError);
+    }
+
+    console.log(`[REJECT-ORDER] Driver ${driverId} rejected order ${id}. Reason: ${reason}`);
+
+    res.json({
+      success: true,
+      message: 'Order rejected successfully. It will be reassigned.',
+      data: order
+    });
+  } catch (error) {
+    console.error('[REJECT-ORDER] Error:', error);
+    next(error);
+  }
+};
+
+// Driver: Report delivery issue
+const reportDeliveryIssue = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { issueType, description, photoUrl, latitude, longitude } = req.body;
+    const driverId = req.user.id;
+
+    // Validate required fields
+    if (!issueType) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Issue type is required' 
+      });
+    }
+
+    if (!description || description.trim().length < 10) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Description is required (minimum 10 characters)' 
+      });
+    }
+
+    const order = await Order.findById(id).populate('user', 'name email phone');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Verify this driver is assigned to this order
+    if (!order.assignedDriver || order.assignedDriver.toString() !== driverId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You are not assigned to this order' 
+      });
+    }
+
+    // Create delivery issue
+    const DeliveryIssue = require('../models/DeliveryIssue');
+    
+    const issueData = {
+      order: id,
+      driver: driverId,
+      issueType,
+      description: description.trim(),
+      status: 'reported',
+      priority: issueType === 'damaged-product' || issueType === 'access-denied' ? 'high' : 'medium'
+    };
+
+    if (photoUrl) {
+      issueData.photoUrl = photoUrl;
+    }
+
+    if (latitude && longitude) {
+      issueData.location = {
+        type: 'Point',
+        coordinates: [longitude, latitude]
+      };
+    }
+
+    const issue = await DeliveryIssue.create(issueData);
+
+    // Get driver info for notifications
+    const driver = await User.findById(driverId).select('name phone email');
+
+    // Send notifications to admin and staff
+    try {
+      await sendNotifications('deliveryIssueReported', order, { issue, driver });
+    } catch (notifError) {
+      console.error('[REPORT-ISSUE] Notification error:', notifError);
+    }
+
+    console.log(`[REPORT-ISSUE] Driver ${driverId} reported ${issueType} for order ${id}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Delivery issue reported successfully',
+      data: issue
+    });
+  } catch (error) {
+    console.error('[REPORT-ISSUE] Error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
@@ -952,4 +1191,7 @@ module.exports = {
   updateDeliveryStatus,
   assignOrderToDriver,
   addOrderNote,
+  acceptOrder,
+  rejectOrder,
+  reportDeliveryIssue,
 };

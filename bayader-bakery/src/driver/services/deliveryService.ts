@@ -48,7 +48,7 @@ class DeliveryService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: `${API_BASE_URL}/deliveries`,
+      baseURL: `${API_BASE_URL}/orders`,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -72,7 +72,7 @@ class DeliveryService {
    */
   async getMyDeliveries(page = 1, limit = 20): Promise<Delivery[]> {
     try {
-      const response = await this.api.get<DeliveryResponse>('/my', {
+      const response = await this.api.get<DeliveryResponse>('/driver/my-orders', {
         params: { page, limit },
       })
       
@@ -117,8 +117,8 @@ class DeliveryService {
     }
   ): Promise<Delivery> {
     try {
-      const response = await this.api.patch<DeliveryResponse>(`/${id}/status`, {
-        status,
+      const response = await this.api.patch<DeliveryResponse>(`/${id}/delivery-status`, {
+        deliveryStatus: status,
         ...options,
       })
       return response.data.data as Delivery

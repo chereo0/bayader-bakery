@@ -40,6 +40,17 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     default: null 
   },
+  assignmentStatus: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected'],
+    default: 'pending'
+  },
+  assignmentHistory: [{
+    driver: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ['assigned', 'accepted', 'rejected'] },
+    reason: { type: String },
+    timestamp: { type: Date, default: Date.now }
+  }],
   deliveryStatus: {
     type: String,
     enum: ['pending', 'assigned', 'in-transit', 'delivered', 'failed'],

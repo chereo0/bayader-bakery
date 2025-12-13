@@ -36,6 +36,7 @@ app.use('/api/event-bookings', require('./routes/eventBookingRoutes'));
 app.use('/api/custom-orders', require('./routes/customOrderRoutes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/drivers', require('./routes/drivers'));
+app.use('/api/driver/location', require('./routes/driverLocation'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/order-issues', require('./routes/orderIssues'));
 app.use('/api/inventory-alerts', require('./routes/inventoryAlerts'));

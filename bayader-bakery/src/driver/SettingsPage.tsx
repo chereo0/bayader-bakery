@@ -90,6 +90,7 @@ const SettingsPage: React.FC = () => {
                 value={settings.profile.name}
                 onChange={e => updateSetting('profile', 'name', e.target.value)}
                 className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                aria-label="Full name"
               />
             </div>
             <div>
@@ -99,6 +100,7 @@ const SettingsPage: React.FC = () => {
                 value={settings.profile.phone}
                 onChange={e => updateSetting('profile', 'phone', e.target.value)}
                 className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                aria-label="Phone number"
               />
             </div>
             <div>
@@ -129,6 +131,7 @@ const SettingsPage: React.FC = () => {
                   checked={settings.notifications.orderUpdates}
                   onChange={e => updateSetting('notifications', 'orderUpdates', e.target.checked)}
                   className="sr-only peer"
+                  aria-label="Toggle order updates notifications"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E]"></div>
               </label>
@@ -144,6 +147,7 @@ const SettingsPage: React.FC = () => {
                   checked={settings.notifications.deliveryAlerts}
                   onChange={e => updateSetting('notifications', 'deliveryAlerts', e.target.checked)}
                   className="sr-only peer"
+                  aria-label="Toggle delivery alerts notifications"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E]"></div>
               </label>
@@ -159,6 +163,7 @@ const SettingsPage: React.FC = () => {
                   checked={settings.notifications.push}
                   onChange={e => updateSetting('notifications', 'push', e.target.checked)}
                   className="sr-only peer"
+                  aria-label="Toggle push notifications"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E]"></div>
               </label>
@@ -176,6 +181,7 @@ const SettingsPage: React.FC = () => {
                 value={settings.preferences.language}
                 onChange={e => updateSetting('preferences', 'language', e.target.value as 'en' | 'ar')}
                 className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                aria-label="Select language preference"
               >
                 <option value="en">English</option>
                 <option value="ar">العربية</option>
@@ -187,6 +193,7 @@ const SettingsPage: React.FC = () => {
                 value={settings.preferences.theme}
                 onChange={e => updateSetting('preferences', 'theme', e.target.value as 'light' | 'dark')}
                 className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                aria-label="Select theme preference"
               >
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>

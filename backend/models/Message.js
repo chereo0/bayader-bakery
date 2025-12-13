@@ -11,6 +11,12 @@ const messageSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  order: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
+    default: null,
+    index: true
+  },
   subject: {
     type: String,
     required: [true, 'Subject is required'],
@@ -23,7 +29,7 @@ const messageSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['system', 'admin', 'staff'],
+    enum: ['system', 'admin', 'staff', 'driver', 'order-update', 'issue-report'],
     default: 'staff'
   },
   read: {
@@ -38,6 +44,19 @@ const messageSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  priority: {
+    type: String,
+    enum: ['low', 'normal', 'high', 'urgent'],
+    default: 'normal'
+  },
+  attachments: [{
+    type: {
+      type: String,
+      enum: ['image', 'document']
+    },
+    url: String,
+    filename: String
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

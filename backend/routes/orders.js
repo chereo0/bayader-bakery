@@ -15,6 +15,9 @@ const {
   updateDeliveryStatus,
   assignOrderToDriver,
   addOrderNote,
+  acceptOrder,
+  rejectOrder,
+  reportDeliveryIssue,
 } = require('../controllers/orderController');
 
 // Customer: create order
@@ -39,7 +42,10 @@ router.get('/staff/stats', auth, requireRole('staff', 'admin'), getStaffOrderSta
 router.get('/', auth, requireRole('admin', 'staff'), getAllOrders);
 
 // Admin/Staff/Driver: update order status
-router.patch('/:id/status', auth, requireRole('admin', 'staff', 'driver'), updateOrderStatus);
+router.patch('/:id/status', (req, res, next) => {
+  console.log('🚨🚨🚨 [ROUTE] PATCH /:id/status HIT!', { id: req.params.id, body: req.body, user: req.user?.email });
+  next();
+}, auth, requireRole('admin', 'staff', 'driver'), updateOrderStatus);
 
 // Driver: update delivery status (in-transit, delivered, failed)
 router.patch('/:id/delivery-status', auth, requireRole('driver'), updateDeliveryStatus);
@@ -49,6 +55,15 @@ router.patch('/:id/assign-driver', auth, requireRole('admin', 'staff'), assignOr
 
 // Admin/Staff: add note to order
 router.post('/:id/notes', auth, requireRole('admin', 'staff'), addOrderNote);
+
+// Driver: accept order assignment
+router.post('/:id/accept', auth, requireRole('driver'), acceptOrder);
+
+// Driver: reject order assignment
+router.post('/:id/reject', auth, requireRole('driver'), rejectOrder);
+
+// Driver: report delivery issue
+router.post('/:id/report-issue', auth, requireRole('driver'), reportDeliveryIssue);
 
 // Customer: cancel order
 router.patch('/:id/cancel', auth, cancelOrder);

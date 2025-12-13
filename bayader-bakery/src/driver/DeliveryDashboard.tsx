@@ -3,6 +3,7 @@ import { Delivery, deliveries as initialDeliveries, summaryStats } from './data'
 import SummaryCard from './SummaryCards'
 import DeliveryTable from './DeliveryTable'
 import deliveryService from './services/deliveryService'
+import locationService from './services/locationService'
 
 interface BackendDelivery {
   _id: string
@@ -183,6 +184,7 @@ const DeliveryDashboard: React.FC = () => {
                     const delivery = deliveries.find(d => d.id === e.target.value)
                     if (delivery) setUpdateStatus(delivery.status)
                   }}
+                  aria-label="Select order to update status"
                   className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 bg-white text-[#5E372E]"
                 >
                   <option value="">Select Order</option>
@@ -272,6 +274,7 @@ const DeliveryDashboard: React.FC = () => {
                   value={issueReport.orderId}
                   onChange={e => setIssueReport({ ...issueReport, orderId: e.target.value })}
                   className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                  aria-label="Select order to report issue"
                 >
                   <option value="">Select Order</option>
                   {deliveries.filter(d => d.status !== 'delivered').map(d => (
@@ -296,6 +299,7 @@ const DeliveryDashboard: React.FC = () => {
                   accept="image/*"
                   onChange={e => setIssueReport({ ...issueReport, photo: e.target.files?.[0] || null })}
                   className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                  aria-label="Upload photo of delivery issue"
                 />
               </div>
             </div>

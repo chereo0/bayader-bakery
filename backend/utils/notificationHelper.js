@@ -80,8 +80,8 @@ const notificationTemplates = {
 
   orderAssignedDriver: {
     driver: (order, driver) => ({
-      title: '🚗 New Delivery Assignment',
-      message: `You've been assigned Order #${order.orderNumber}. ${order.isPickup ? 'Pickup' : 'Delivery'} - ${order.deliveryAddress?.city || order.pickupLocation}`,
+      title: '🚗 New Delivery Assignment - Action Required',
+      message: `You've been assigned Order #${order.orderNumber}. Please accept or reject. ${order.isPickup ? 'Pickup' : 'Delivery'} - ${order.deliveryAddress?.city || order.pickupLocation}`,
       type: 'alert',
       actionUrl: '/driver'
     }),
@@ -90,6 +90,78 @@ const notificationTemplates = {
       message: `${driver.name} will deliver your order #${order.orderNumber}. Contact: ${driver.phone || 'N/A'}`,
       type: 'order',
       actionUrl: '/orders'
+    })
+  },
+
+  orderAcceptedByDriver: {
+    admin: (order, driver) => ({
+      title: '✅ Driver Accepted Order',
+      message: `${driver.name} accepted Order #${order.orderNumber}. Delivery in progress.`,
+      type: 'success',
+      actionUrl: '/admin/orders'
+    }),
+    staff: (order, driver) => ({
+      title: '✅ Order Accepted',
+      message: `Driver ${driver.name} accepted Order #${order.orderNumber}`,
+      type: 'success',
+      actionUrl: '/staff/orders'
+    })
+  },
+
+  orderRejectedByDriver: {
+    admin: (order, driver, reason) => ({
+      title: '⚠️ Driver Rejected Order',
+      message: `${driver.name} rejected Order #${order.orderNumber}. Reason: ${reason || 'Not specified'}. Reassignment needed.`,
+      type: 'warning',
+      actionUrl: '/admin/orders'
+    }),
+    staff: (order, driver, reason) => ({
+      title: '⚠️ Order Rejected',
+      message: `Driver ${driver.name} rejected Order #${order.orderNumber}. Reason: ${reason || 'Not specified'}`,
+      type: 'warning',
+      actionUrl: '/staff/orders'
+    })
+  },
+
+  orderReadyForPickup: {
+    driver: (order) => ({
+      title: '📦 Order Ready for Pickup',
+      message: `Order #${order.orderNumber} is ready. Please pick up from bakery.`,
+      type: 'alert',
+      actionUrl: '/driver'
+    })
+  },
+
+  customerCalled: {
+    driver: (order, callerName) => ({
+      title: '📞 Customer Called',
+      message: `${callerName} called regarding Order #${order.orderNumber}`,
+      type: 'info',
+      actionUrl: '/driver/messages'
+    })
+  },
+
+  customerMessaged: {
+    driver: (order, message) => ({
+      title: '💬 New Message',
+      message: `New message about Order #${order.orderNumber}: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`,
+      type: 'info',
+      actionUrl: '/driver/messages'
+    })
+  },
+
+  deliveryIssueReported: {
+    admin: (issue, order, driver) => ({
+      title: '🚨 Delivery Issue Reported',
+      message: `${driver.name} reported ${issue.issueType} for Order #${order.orderNumber}`,
+      type: 'alert',
+      actionUrl: '/admin/orders'
+    }),
+    staff: (issue, order, driver) => ({
+      title: '🚨 Delivery Issue',
+      message: `Issue reported for Order #${order.orderNumber}: ${issue.issueType}`,
+      type: 'alert',
+      actionUrl: '/staff/orders'
     })
   },
 
