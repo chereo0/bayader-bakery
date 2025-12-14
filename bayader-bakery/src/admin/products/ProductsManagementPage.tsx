@@ -7,6 +7,7 @@ import ProductTable from './ProductTable'
 import ProductFormModal from './ProductFormModal'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/ui/Toast'
+import './ProductsManagementPage.css'
 
 const ProductsManagementPage: React.FC = () => {
   const [products, setProducts] = useState<ProductItem[]>(productsData)
@@ -133,7 +134,10 @@ const ProductsManagementPage: React.FC = () => {
             category: product.category,
             description: product.description,
             stock: product.stock,
+            image: product.image || '',
             images: product.image ? [product.image] : [],
+            ingredients: product.ingredients || [],
+            recipe: product.recipe || [],
             status: product.status,
           }),
         })
@@ -159,7 +163,10 @@ const ProductsManagementPage: React.FC = () => {
             category: product.category,
             description: product.description,
             stock: product.stock,
+            image: product.image || '',
             images: product.image ? [product.image] : [],
+            ingredients: product.ingredients || [],
+            recipe: product.recipe || [],
             status: product.status,
           }),
         })
@@ -197,7 +204,7 @@ const ProductsManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F6F2] py-8" style={{ backgroundImage: "url('/images/polka.png')", backgroundRepeat: 'repeat' }}>
+    <div className="min-h-screen bg-[#F9F6F2] py-8 polka-background">
       <div className="max-w-6xl mx-auto px-4">
         <AddProductButton onClick={openAdd} />
 
@@ -224,7 +231,7 @@ const ProductsManagementPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="px-3 py-1 rounded border disabled:opacity-50">Prev</button>
             <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="px-3 py-1 rounded border disabled:opacity-50">Next</button>
-            <select value={limit} onChange={e=>{ setLimit(Number(e.target.value)); setPage(1); }} className="border px-2 py-1 rounded">
+            <select title="Items per page" value={limit} onChange={e=>{ setLimit(Number(e.target.value)); setPage(1); }} className="border px-2 py-1 rounded">
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={20}>20</option>

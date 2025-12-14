@@ -266,7 +266,7 @@ const getLowStockProducts = async (req, res) => {
   });
 };
 
-// @desc    Upload product image
+// @desc    Upload product image (Cloudinary)
 // @route   POST /api/products/upload
 // @access  Private/Admin
 const uploadImage = async (req, res) => {
@@ -274,12 +274,33 @@ const uploadImage = async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
-  // Build accessible URL to the uploaded file
-  const host = req.get('host');
-  const protocol = req.protocol;
-  const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+  // Cloudinary automatically uploads and returns the URL
+  const fileUrl = req.file.path; // Cloudinary URL
+  const publicId = req.file.filename; // Cloudinary public ID
 
-  res.status(201).json({ success: true, data: { url: fileUrl, filename: req.file.filename } });
+  console.log('✅ [UPLOAD] File uploaded to Cloudinary:');
+  console.log('   URL:', fileUrl);
+  console.log('   Public ID:', publicId);
+  console.log('   Full file object keys:', Object.keys(req.file));
+
+  // Validate URL format
+  if (!fileUrl || (!fileUrl.startsWith('http://') && !fileUrl.startsWith('https://'))) {
+    console.error('❌ [UPLOAD] Invalid URL format:', fileUrl);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Invalid Cloudinary URL',
+      debug: { fileUrl, publicId }
+    });
+  }
+
+  res.status(201).json({ 
+    success: true, 
+    data: { 
+      url: fileUrl,
+      filename: publicId,
+      publicId // Can be used later to delete the image
+    } 
+  });
 };
 
 // @desc    Update product stock (admin/staff)

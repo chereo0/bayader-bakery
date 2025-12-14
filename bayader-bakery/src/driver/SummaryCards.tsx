@@ -2,7 +2,7 @@ import React from 'react'
 
 interface SummaryCardProps {
   title: string
-  value: number
+  value: number | string
   icon?: React.ReactNode
 }
 

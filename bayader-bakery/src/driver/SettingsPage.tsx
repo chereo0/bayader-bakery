@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
 
 interface DriverSettings {
   profile: {
@@ -55,9 +56,11 @@ const SettingsPage: React.FC = () => {
       setError(null)
       // Simulate save
       setSuccess(true)
+      toast.success('Settings saved successfully!')
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       setError('Failed to save settings')
+      toast.error('Failed to save settings')
       console.error('Error:', err)
     }
   }
@@ -212,6 +215,9 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      <Toaster position="top-right" />
     </div>
   )
 }

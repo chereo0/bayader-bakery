@@ -79,13 +79,35 @@ async function start() {
       logger.info(`Server listening on port ${config.PORT}`);
     });
 
+    // Initialize Socket.IO
+    const { Server } = require('socket.io');
+    const io = new Server(server, {
+      cors: {
+        origin: config.FRONTEND_URL === '*' ? '*' : config.FRONTEND_URL,
+        methods: ['GET', 'POST']
+      }
+    });
+
+    // Make io available to routes
+    app.set('io', io);
+
+    // Socket.IO connection handling
+    const socketHandler = require('./utils/socketHandler');
+    const socketHelpers = socketHandler(io);
+    
+    // Make socket helpers available to routes
+    app.set('socketHelpers', socketHelpers);
+    
+    logger.info('Socket.IO initialized');
+
     // Graceful shutdown
     const shutdown = async () => {
       logger.info('Shutting down server...');
       try {
+        io.close();
         await closeDB();
       } catch (e) {
-        logger.warn('Error during DB close:', e.message);
+        logger.warn('Error during shutdown:', e.message);
       }
       server.close(() => process.exit(0));
     };

@@ -247,7 +247,8 @@ const createOrder = async (req, res, next) => {
 
     // Send notifications to customer, staff, and admins
     try {
-      await sendNotifications('orderCreated', order);
+      const socketHelpers = req.app.get('socketHelpers');
+      await sendNotifications('orderCreated', order, { socketHelpers });
     } catch (notifError) {
       logger.error('Failed to send order creation notifications:', notifError);
     }
@@ -508,10 +509,12 @@ const updateOrderStatus = async (req, res, next) => {
         newStatus: status,
         actorId: req.user?.id
       });
+      const socketHelpers = req.app.get('socketHelpers');
       await sendNotifications('orderStatusChanged', order, { 
         newStatus: status,
         actor: req.user?.id,  // Pass ObjectId string, not full JWT object
-        actorName: req.user?.name || req.user?.email?.split('@')[0] || 'Admin'
+        actorName: req.user?.name || req.user?.email?.split('@')[0] || 'Admin',
+        socketHelpers
       });
       console.log('[ORDER-STATUS] ✅ Notifications sent successfully');
     } catch (notifError) {
@@ -879,7 +882,8 @@ const assignOrderToDriver = async (req, res, next) => {
 
     // Send notifications to driver and customer
     try {
-      await sendNotifications('orderAssignedDriver', order, { driver });
+      const socketHelpers = req.app.get('socketHelpers');
+      await sendNotifications('orderAssignedDriver', order, { driver, socketHelpers });
     } catch (notifError) {
       logger.error('Failed to send driver assignment notifications:', notifError);
     }
@@ -1002,7 +1006,8 @@ const acceptOrder = async (req, res, next) => {
 
     // Send notifications to admin and staff
     try {
-      await sendNotifications('orderAcceptedByDriver', order, { driver });
+      const socketHelpers = req.app.get('socketHelpers');
+      await sendNotifications('orderAcceptedByDriver', order, { driver, socketHelpers });
     } catch (notifError) {
       console.error('[ACCEPT-ORDER] Notification error:', notifError);
     }
@@ -1076,7 +1081,8 @@ const rejectOrder = async (req, res, next) => {
 
     // Send notifications to admin and staff about rejection
     try {
-      await sendNotifications('orderRejectedByDriver', order, { driver, reason: reason.trim() });
+      const socketHelpers = req.app.get('socketHelpers');
+      await sendNotifications('orderRejectedByDriver', order, { driver, reason: reason.trim(), socketHelpers });
     } catch (notifError) {
       console.error('[REJECT-ORDER] Notification error:', notifError);
     }
@@ -1160,7 +1166,8 @@ const reportDeliveryIssue = async (req, res, next) => {
 
     // Send notifications to admin and staff
     try {
-      await sendNotifications('deliveryIssueReported', order, { issue, driver });
+      const socketHelpers = req.app.get('socketHelpers');
+      await sendNotifications('deliveryIssueReported', order, { issue, driver, socketHelpers });
     } catch (notifError) {
       console.error('[REPORT-ISSUE] Notification error:', notifError);
     }
@@ -1178,6 +1185,55 @@ const reportDeliveryIssue = async (req, res, next) => {
   }
 };
 
+// @route   GET /api/orders/driver/stats/today
+// @desc    Get today's delivery stats for driver
+// @access  Private (Driver)
+const getDriverTodayStats = async (req, res, next) => {
+  try {
+    const driverId = req.user.id;
+    
+    // Get start and end of today
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    // Get today's completed deliveries
+    const completedDeliveries = await Order.countDocuments({
+      assignedDriver: driverId,
+      deliveryStatus: 'delivered',
+      updatedAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+    
+    // Get today's earnings - using find instead of aggregate to avoid ObjectId issues
+    const todayOrders = await Order.find({
+      assignedDriver: driverId,
+      deliveryStatus: 'delivered',
+      updatedAt: { $gte: startOfDay, $lte: endOfDay }
+    }).select('totalAmount');
+    
+    const todayEarnings = todayOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    
+    // Get active orders (pending, accepted, in-transit)
+    const activeOrders = await Order.countDocuments({
+      assignedDriver: driverId,
+      deliveryStatus: { $in: ['pending', 'accepted', 'in-transit'] }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        completedToday: completedDeliveries,
+        earningsToday: todayEarnings,
+        activeOrders
+      }
+    });
+  } catch (error) {
+    console.error('[DRIVER-STATS] Error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
@@ -1188,6 +1244,7 @@ module.exports = {
   getStaffOrders,
   getStaffOrderStats,
   getDriverOrders,
+  getDriverTodayStats,
   updateDeliveryStatus,
   assignOrderToDriver,
   addOrderNote,

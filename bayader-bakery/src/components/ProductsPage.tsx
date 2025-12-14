@@ -175,7 +175,8 @@ const ProductsPage: React.FC = () => {
           if (productsArray.length > 0) {
             const mappedProducts = productsArray.map(p => ({
               ...p,
-              image: p.image || '/images/products.jpg'
+              // Use image field, or first item from images array, or fallback
+              image: p.image || (p.images && p.images.length > 0 ? p.images[0] : '/images/products.jpg')
               // Don't set id - use _id directly
             }))
             console.log('Mapped products:', mappedProducts)
@@ -538,9 +539,15 @@ const ProductsPage: React.FC = () => {
                   {/* Product Image */}
                   <div className="relative h-48 overflow-hidden bg-bakery-100 flex-shrink-0">
                     <img
-                      src={product.image}
+                      src={product.image || '/images/placeholder.jpg'}
                       alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (target.src !== window.location.origin + '/images/placeholder.jpg') {
+                          target.src = '/images/placeholder.jpg';
+                        }
+                      }}
                     />
                     {/* Category Badge */}
                     <div className="absolute top-3 right-3 bg-bakery-900 text-white px-3 py-1 rounded-full text-xs font-semibold">

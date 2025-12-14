@@ -97,21 +97,49 @@ export const productApi = {
   // Get single product
   getProductById: async (id: string): Promise<ApiResponse<Product>> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      console.log('🌐 Fetching product from API:', id)
+      const url = `${API_BASE_URL}/products/${id}?_=${Date.now()}`
+      console.log('📍 URL:', url)
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       });
+
+      console.log('📊 Response status:', response.status, response.statusText)
+      console.log('📋 Response headers:', {
+        contentType: response.headers.get('Content-Type'),
+        contentLength: response.headers.get('Content-Length'),
+      })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      // Check if response has content
+      const contentLength = response.headers.get('Content-Length')
+      if (contentLength === '0' || response.status === 304) {
+        console.error('⚠️ Empty response or 304, no content to parse')
+        throw new Error('Server returned empty response (304 Not Modified)')
+      }
+
+      const text = await response.text()
+      console.log('📄 Response text:', text.substring(0, 200))
+      
+      if (!text) {
+        throw new Error('Empty response body')
+      }
+
+      const data = JSON.parse(text)
+      console.log('✅ Parsed data:', data)
       return data;
     } catch (error) {
-      console.error('Error fetching product:', error);
+      console.error('❌ Error fetching product:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch product',

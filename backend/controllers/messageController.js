@@ -1,5 +1,6 @@
 const Message = require('../models/Message');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 // GET /api/messages - List messages for current user (inbox)
 // Supports ?fromRole=admin|staff|driver to filter by sender role
@@ -126,6 +127,43 @@ const sendMessage = async (req, res) => {
 
     await newMessage.save();
     await newMessage.populate('from', 'name email role');
+
+    // Create notification for the recipient
+    try {
+      const sender = await User.findById(req.user.id);
+      const notification = new Notification({
+        recipient: to,
+        title: '💬 New Message',
+        message: `New message from ${sender.name}: ${subject}`,
+        type: 'info',
+        category: 'message',
+        priority: 'normal',
+        action: {
+          url: '/messages',
+          label: 'View Message'
+        }
+      });
+      await notification.save();
+
+      // Emit via WebSocket if available
+      const socketHelpers = req.app.get('socketHelpers');
+      if (socketHelpers) {
+        socketHelpers.emitNotification(to, {
+          _id: notification._id,
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          category: notification.category,
+          priority: notification.priority,
+          action: notification.action,
+          read: false,
+          createdAt: notification.createdAt
+        });
+      }
+    } catch (notifError) {
+      console.error('[MESSAGE] Failed to create notification:', notifError);
+      // Continue even if notification fails
+    }
 
     res.status(201).json({
       success: true,

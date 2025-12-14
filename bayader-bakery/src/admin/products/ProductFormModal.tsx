@@ -48,11 +48,28 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
 
   const handleFile = async (file?: File) => {
     if (!file) return
+    
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      show && show('Please select an image file')
+      return
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      show && show('Image size must be less than 5MB')
+      return
+    }
+    
     setUploading(true)
     show && show('Uploading image...')
+    
     try {
       const fd = new FormData()
       fd.append('image', file)
+      
+      console.log('📤 Uploading to:', `${API_URL}/products/upload`)
+      console.log('📤 File:', file.name, file.type, file.size)
+      
       const res = await fetch(`${API_URL}/products/upload`, {
         method: 'POST',
         headers: {
@@ -60,21 +77,42 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
         },
         body: fd,
       })
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
+        console.error('❌ Upload error:', err)
         show && show(err.message || 'Upload failed')
         setUploading(false)
         return
       }
+      
       const data = await res.json().catch(() => null)
-      const url = data && data.data ? data.data.url : null
-      if (url) {
-        setForm(f => ({ ...f, image: url }))
-        show && show('Image uploaded')
+      console.log('✅ Upload response:', data)
+      
+      const url = data?.data?.url
+      
+      if (!url) {
+        console.error('❌ No URL in response:', data)
+        show && show('Upload succeeded but no URL returned')
+        setUploading(false)
+        return
       }
+      
+      // Validate URL format
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        console.error('❌ Invalid URL format:', url)
+        show && show('Invalid image URL received')
+        setUploading(false)
+        return
+      }
+      
+      console.log('✅ Setting image URL:', url)
+      setForm(f => ({ ...f, image: url }))
+      show && show('✅ Image uploaded successfully')
+      
     } catch (err) {
-      console.error('Upload failed', err)
-      show && show('Upload failed')
+      console.error('❌ Upload exception:', err)
+      show && show('Upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
     } finally {
       setUploading(false)
     }
@@ -123,13 +161,68 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
             </select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium">Image URL</label>
-            <div className="flex gap-2 items-center">
-              <input value={form.image ?? ''} onChange={e=>handleChange('image', e.target.value)} className="flex-1 border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" placeholder="Enter image URL" />
-              <input type="file" accept="image/*" title="Upload Product Image" onChange={e=>handleFile(e.target.files?.[0])} className="text-sm" />
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium block mb-2">Product Image</label>
+            
+            {/* Current Image Preview */}
+            {form.image && (
+              <div className="mb-3">
+                <p className="text-xs text-gray-600 mb-1">Current Image:</p>
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={form.image} 
+                    alt="Product preview" 
+                    className="w-24 h-24 object-cover rounded border"
+                    onError={(e) => {
+                      e.currentTarget.src = '/images/placeholder.jpg'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, image: '' }))}
+                    className="text-sm text-red-600 hover:text-red-700"
+                  >
+                    Remove Image
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Upload or Paste URL */}
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs font-medium text-gray-700">Upload New Image</label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  title="Upload Product Image" 
+                  onChange={e=>handleFile(e.target.files?.[0])} 
+                  className="w-full text-sm border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" 
+                  disabled={uploading}
+                />
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-gray-700">Or Paste Image URL</label>
+                <input 
+                  value={form.image ?? ''} 
+                  onChange={e=>handleChange('image', e.target.value)} 
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" 
+                  placeholder="https://res.cloudinary.com/..." 
+                  disabled={uploading}
+                />
+              </div>
+              
+              {uploading && (
+                <div className="text-sm text-blue-600 flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Uploading image...
+                </div>
+              )}
             </div>
-            {uploading && <div className="text-sm text-gray-500 mt-1">Uploading...</div>}
           </div>
 
           <div className="md:col-span-2">
@@ -141,6 +234,22 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
               rows={2}
               placeholder="Product description"
             />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium block mb-2">Ingredients (Optional, comma-separated)</label>
+            <input 
+              type="text"
+              value={Array.isArray(form.ingredients) ? form.ingredients.join(', ') : ''} 
+              onChange={e=>{
+                const val = e.target.value;
+                const arr = val ? val.split(',').map(s => s.trim()).filter(Boolean) : [];
+                handleChange('ingredients', arr);
+              }}
+              className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
+              placeholder="flour, sugar, eggs, butter"
+            />
+            <p className="text-xs text-gray-500 mt-1">Enter ingredients separated by commas</p>
           </div>
 
           <div className="md:col-span-2">

@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import orderService, { DriverOrder } from './services/orderService'
+import AcceptRejectModal from './components/AcceptRejectModal'
+import IssueReportModal from './components/IssueReportModal'
+import toast, { Toaster } from 'react-hot-toast'
+import { socketService } from '../services/socketService'
 
 interface OrderDisplay {
   id: string
@@ -8,6 +12,7 @@ interface OrderDisplay {
   address: string
   totalAmount: number
   deliveryStatus: string
+  assignmentStatus?: string
   phone?: string
   estimatedDeliveryDate?: string
 }
@@ -17,6 +22,17 @@ const MyDeliveriesPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'pending' | 'assigned' | 'in-transit' | 'delivered'>('pending')
+  
+  // Modals
+  const [acceptRejectModal, setAcceptRejectModal] = useState<{
+    isOpen: boolean
+    order: OrderDisplay | null
+  }>({ isOpen: false, order: null })
+  
+  const [issueReportModal, setIssueReportModal] = useState<{
+    isOpen: boolean
+    order: OrderDisplay | null
+  }>({ isOpen: false, order: null })
 
   // Fetch orders from backend
   useEffect(() => {
@@ -29,11 +45,12 @@ const MyDeliveriesPage: React.FC = () => {
         const transformed = data.map((o: DriverOrder) => ({
           id: o._id,
           orderNumber: o.orderNumber,
-          customerName: o.user.name || 'Customer',
+          customerName: o.user?.name || 'Customer',
           address: orderService.formatAddress(o.deliveryAddress),
-          totalAmount: o.totalAmount,
-          deliveryStatus: o.deliveryStatus,
-          phone: o.user.phone,
+          totalAmount: o.totalAmount || 0,
+          deliveryStatus: o.deliveryStatus || 'pending',
+          assignmentStatus: o.assignmentStatus,
+          phone: o.user?.phone,
           estimatedDeliveryDate: o.estimatedDeliveryDate,
         }))
 
@@ -49,6 +66,16 @@ const MyDeliveriesPage: React.FC = () => {
     }
 
     fetchOrders()
+    
+    // Set up polling for order refresh every 15 seconds
+    const ordersInterval = setInterval(() => {
+      fetchOrders()
+    }, 15000)
+    
+    // Cleanup
+    return () => {
+      clearInterval(ordersInterval)
+    }
   }, [])
 
   const handleStatusChange = async (orderId: string, newStatus: 'in-transit' | 'delivered' | 'failed') => {
@@ -61,9 +88,77 @@ const MyDeliveriesPage: React.FC = () => {
           o.id === orderId ? { ...o, deliveryStatus: newStatus } : o
         )
       )
+      toast.success('Delivery status updated successfully')
     } catch (err) {
       console.error('Error updating delivery status:', err)
-      alert('Failed to update delivery status')
+      toast.error('Failed to update delivery status')
+    }
+  }
+
+  const handleAcceptOrder = async () => {
+    if (!acceptRejectModal.order) return
+    
+    try {
+      await orderService.acceptOrder(acceptRejectModal.order.id)
+      
+      // Update in frontend
+      setOrders(prev =>
+        prev.map(o =>
+          o.id === acceptRejectModal.order!.id 
+            ? { ...o, assignmentStatus: 'accepted', deliveryStatus: 'assigned' } 
+            : o
+        )
+      )
+      
+      toast.success('Order accepted successfully! 🎉')
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Failed to accept order'
+      toast.error(errorMsg)
+      throw err
+    }
+  }
+
+  const handleRejectOrder = async (reason: string) => {
+    if (!acceptRejectModal.order) return
+    
+    try {
+      await orderService.rejectOrder(acceptRejectModal.order.id, reason)
+      
+      // Remove from list or mark as rejected
+      setOrders(prev =>
+        prev.filter(o => o.id !== acceptRejectModal.order!.id)
+      )
+      
+      toast.success('Order rejected. It will be reassigned.')
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Failed to reject order'
+      toast.error(errorMsg)
+      throw err
+    }
+  }
+
+  const handleReportIssue = async (
+    issueType: string,
+    description: string,
+    latitude?: number,
+    longitude?: number
+  ) => {
+    if (!issueReportModal.order) return
+    
+    try {
+      await orderService.reportIssue(
+        issueReportModal.order.id,
+        issueType,
+        description,
+        latitude,
+        longitude
+      )
+      
+      toast.success('Issue reported successfully. Admin has been notified.')
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Failed to report issue'
+      toast.error(errorMsg)
+      throw err
     }
   }
 
@@ -156,11 +251,21 @@ const MyDeliveriesPage: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <h3 className="text-lg font-semibold text-[#5E372E]">{order.orderNumber}</h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderService.getDeliveryStatusClass(order.deliveryStatus)}`}>
                           {orderService.getDeliveryStatusLabel(order.deliveryStatus)}
                         </span>
+                        {order.assignmentStatus === 'pending' && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            ⏳ Awaiting Response
+                          </span>
+                        )}
+                        {order.assignmentStatus === 'accepted' && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓ Accepted
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-[#6b4f45] mb-1">
                         <strong>Customer:</strong> {order.customerName}
@@ -178,23 +283,49 @@ const MyDeliveriesPage: React.FC = () => {
                       </p>
                     </div>
 
-                    {/* Status Action Buttons */}
+                    {/* Action Buttons */}
                     <div className="flex flex-col gap-2">
-                      {order.deliveryStatus === 'pending' || order.deliveryStatus === 'assigned' ? (
+                      {/* Accept/Reject for pending assignments */}
+                      {order.assignmentStatus === 'pending' && (
+                        <button
+                          onClick={() => setAcceptRejectModal({ isOpen: true, order })}
+                          className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors text-sm font-medium whitespace-nowrap"
+                        >
+                          Accept/Reject
+                        </button>
+                      )}
+
+                      {/* Start delivery for accepted/assigned orders */}
+                      {(order.assignmentStatus === 'accepted' || order.deliveryStatus === 'assigned') && 
+                       order.deliveryStatus !== 'in-transit' && 
+                       order.deliveryStatus !== 'delivered' ? (
                         <button
                           onClick={() => handleStatusChange(order.id, 'in-transit')}
                           className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium whitespace-nowrap"
                         >
-                          Start Delivery
+                          🚚 Start Delivery
                         </button>
-                      ) : order.deliveryStatus === 'in-transit' ? (
+                      ) : null}
+
+                      {/* Mark delivered for in-transit orders */}
+                      {order.deliveryStatus === 'in-transit' ? (
                         <button
                           onClick={() => handleStatusChange(order.id, 'delivered')}
                           className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors text-sm font-medium whitespace-nowrap"
                         >
-                          Mark Delivered
+                          ✓ Mark Delivered
                         </button>
                       ) : null}
+
+                      {/* Report issue for active deliveries */}
+                      {order.deliveryStatus !== 'delivered' && order.assignmentStatus !== 'pending' && (
+                        <button
+                          onClick={() => setIssueReportModal({ isOpen: true, order })}
+                          className="px-4 py-2 border border-red-500 text-red-600 rounded-md hover:bg-red-50 transition-colors text-sm font-medium whitespace-nowrap"
+                        >
+                          🚨 Report Issue
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -203,6 +334,40 @@ const MyDeliveriesPage: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Accept/Reject Modal */}
+      {acceptRejectModal.order && (
+        <AcceptRejectModal
+          isOpen={acceptRejectModal.isOpen}
+          onClose={() => setAcceptRejectModal({ isOpen: false, order: null })}
+          order={{
+            id: acceptRejectModal.order.id,
+            orderNumber: acceptRejectModal.order.orderNumber,
+            customerName: acceptRejectModal.order.customerName,
+            address: acceptRejectModal.order.address,
+            totalAmount: acceptRejectModal.order.totalAmount
+          }}
+          onAccept={handleAcceptOrder}
+          onReject={handleRejectOrder}
+        />
+      )}
+
+      {/* Issue Report Modal */}
+      {issueReportModal.order && (
+        <IssueReportModal
+          isOpen={issueReportModal.isOpen}
+          onClose={() => setIssueReportModal({ isOpen: false, order: null })}
+          order={{
+            id: issueReportModal.order.id,
+            orderNumber: issueReportModal.order.orderNumber,
+            customerName: issueReportModal.order.customerName
+          }}
+          onSubmit={handleReportIssue}
+        />
+      )}
+
+      {/* Toast Notifications */}
+      <Toaster position="top-right" />
     </div>
   )
 }

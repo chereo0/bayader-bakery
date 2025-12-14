@@ -8,7 +8,7 @@ import InventoryPage from './inventory/InventoryPage'
 import AdminEventsPage from './events/AdminEventsPage'
 import OrdersManagementPage from './orders/OrdersManagementPage'
 import DriversManagementPage from './drivers/DriversManagementPage'
-import MessagingPage from './staff/MessagingPage'
+import AdminMessagesPage from './AdminMessagesPage'
 import AdminNotificationsPage from './AdminNotificationsPage'
 import DashboardStats from './DashboardStats'
 import SalesChart from './SalesChart'
@@ -103,7 +103,7 @@ const AdminDashboard: React.FC = () => {
             )}
 
             {selectedTab === 'Messages' && (
-              <MessagingPage />
+              <AdminMessagesPage />
             )}
 
             {selectedTab === 'Notifications' && (

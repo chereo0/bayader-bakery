@@ -22,7 +22,7 @@ export interface DeliveryAddress {
 export interface DriverOrder {
   _id: string
   orderNumber: string
-  user: {
+  user?: {
     _id: string
     name: string
     phone: string
@@ -32,7 +32,8 @@ export interface DriverOrder {
   totalAmount: number
   status: 'pending' | 'active' | 'shipped' | 'delivered'
   deliveryStatus: 'pending' | 'assigned' | 'in-transit' | 'delivered' | 'failed'
-  deliveryAddress: DeliveryAddress
+  assignmentStatus?: 'pending' | 'accepted' | 'rejected'
+  deliveryAddress?: DeliveryAddress
   estimatedDeliveryDate?: string
   actualDeliveryDate?: string
   createdAt: string
@@ -177,13 +178,17 @@ class OrderService {
   /**
    * Format delivery address for display
    */
-  formatAddress(address: DeliveryAddress): string {
-    const parts = [address.line1]
+  formatAddress(address?: DeliveryAddress | null): string {
+    if (!address) return 'Pickup Order'
+    
+    const parts = []
+    if (address.line1) parts.push(address.line1)
     if (address.line2) parts.push(address.line2)
-    parts.push(address.city)
+    if (address.city) parts.push(address.city)
     if (address.postalCode) parts.push(address.postalCode)
-    parts.push(address.country)
-    return parts.join(', ')
+    if (address.country) parts.push(address.country)
+    
+    return parts.length > 0 ? parts.join(', ') : 'No address provided'
   }
 
   /**
@@ -212,6 +217,71 @@ class OrderService {
       'failed': 'bg-red-100 text-red-800',
     }
     return classes[status] || 'bg-gray-100 text-gray-800'
+  }
+
+  /**
+   * Accept order assignment (Phase 1)
+   */
+  async acceptOrder(orderId: string): Promise<DriverOrder> {
+    try {
+      const response = await this.api.post<OrderResponse>(`/${orderId}/accept`)
+      return response.data.data as DriverOrder
+    } catch (error) {
+      console.error(`Failed to accept order ${orderId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Reject order assignment (Phase 1)
+   */
+  async rejectOrder(orderId: string, reason: string): Promise<DriverOrder> {
+    try {
+      if (!reason || reason.trim().length < 5) {
+        throw new Error('Rejection reason must be at least 5 characters')
+      }
+
+      const response = await this.api.post<OrderResponse>(`/${orderId}/reject`, {
+        reason: reason.trim()
+      })
+      return response.data.data as DriverOrder
+    } catch (error) {
+      console.error(`Failed to reject order ${orderId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Report delivery issue (Phase 1)
+   */
+  async reportIssue(
+    orderId: string,
+    issueType: string,
+    description: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<any> {
+    try {
+      if (!description || description.trim().length < 10) {
+        throw new Error('Issue description must be at least 10 characters')
+      }
+
+      const payload: any = {
+        issueType,
+        description: description.trim()
+      }
+
+      if (latitude !== undefined && longitude !== undefined) {
+        payload.latitude = latitude
+        payload.longitude = longitude
+      }
+
+      const response = await this.api.post(`/${orderId}/report-issue`, payload)
+      return response.data.data
+    } catch (error) {
+      console.error(`Failed to report issue for order ${orderId}:`, error)
+      throw error
+    }
   }
 }
 

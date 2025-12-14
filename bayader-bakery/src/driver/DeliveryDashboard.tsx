@@ -4,6 +4,9 @@ import SummaryCard from './SummaryCards'
 import DeliveryTable from './DeliveryTable'
 import deliveryService from './services/deliveryService'
 import locationService from './services/locationService'
+import { socketService } from '../services/socketService'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 interface BackendDelivery {
   _id: string
@@ -33,6 +36,13 @@ const DeliveryDashboard: React.FC = () => {
   const [updateStatus, setUpdateStatus] = useState<Delivery['status']>('picked')
   const [reportIssueOpen, setReportIssueOpen] = useState(false)
   const [issueReport, setIssueReport] = useState({ orderId: '', description: '', photo: null as File | null })
+  
+  // Today's stats
+  const [todayStats, setTodayStats] = useState({
+    completedToday: 0,
+    earningsToday: 0,
+    activeOrders: 0
+  })
 
   // Fetch deliveries from backend
   useEffect(() => {
@@ -62,8 +72,40 @@ const DeliveryDashboard: React.FC = () => {
         setLoading(false)
       }
     }
+    
+    const fetchTodayStats = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+        
+        const response = await fetch(`${API_BASE_URL}/orders/driver/stats/today`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setTodayStats(data.data)
+        }
+      } catch (err) {
+        console.error('Error fetching today stats:', err)
+      }
+    }
 
     fetchDeliveries()
+    fetchTodayStats()
+    
+    // Poll for updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchDeliveries()
+      fetchTodayStats()
+    }, 30000)
+    
+    return () => {
+      clearInterval(interval)
+    }
   }, [])
 
   const handleStatusChange = async (deliveryId: string, newStatus: Delivery['status']) => {
@@ -116,10 +158,11 @@ const DeliveryDashboard: React.FC = () => {
       {!loading && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <SummaryCard title="Total Deliveries" value={deliveries.length} />
-            <SummaryCard title="Awaiting Pickup" value={pendingCount} />
-            <SummaryCard title="Currently Delivering" value={onWayCount} />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <SummaryCard title="Today's Deliveries" value={todayStats.completedToday} />
+            <SummaryCard title="Today's Earnings" value={`$${(todayStats.earningsToday || 0).toFixed(2)}`} />
+            <SummaryCard title="Active Orders" value={todayStats.activeOrders} />
+            <SummaryCard title="Total Assigned" value={deliveries.length} />
           </div>
 
           {/* Main Content Grid */}

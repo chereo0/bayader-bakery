@@ -12,6 +12,7 @@ const {
   getStaffOrders,
   getStaffOrderStats,
   getDriverOrders,
+  getDriverTodayStats,
   updateDeliveryStatus,
   assignOrderToDriver,
   addOrderNote,
@@ -28,6 +29,9 @@ router.get('/my', auth, getMyOrders);
 
 // Driver: get my assigned orders
 router.get('/driver/my-orders', auth, requireRole('driver'), getDriverOrders);
+
+// Driver: get today's stats
+router.get('/driver/stats/today', auth, requireRole('driver'), getDriverTodayStats);
 
 // Get order by id (owner or admin/staff/driver)
 router.get('/:id', auth, getOrderById);

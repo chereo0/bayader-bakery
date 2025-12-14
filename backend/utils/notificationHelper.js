@@ -205,7 +205,7 @@ const notificationTemplates = {
  * Create and send notifications to appropriate recipients
  * @param {string} eventType - Type of event (orderCreated, orderStatusChanged, etc.)
  * @param {Object} data - Data related to the event (order, customOrder, etc.)
- * @param {Object} additionalData - Additional data (newStatus, driver, actor, etc.)
+ * @param {Object} additionalData - Additional data (newStatus, driver, actor, socketHelpers, etc.)
  */
 async function sendNotifications(eventType, data, additionalData = {}) {
   try {
@@ -331,6 +331,28 @@ async function sendNotifications(eventType, data, additionalData = {}) {
       );
       const created = await Notification.insertMany(notifications);
       console.log(`[NOTIFICATIONS] ✅ Created ${created.length} notifications for event: ${eventType}`);
+      
+      // Emit real-time notifications via WebSocket if socketHelpers available
+      if (additionalData.socketHelpers) {
+        created.forEach(notification => {
+          additionalData.socketHelpers.emitNotification(
+            notification.recipient.toString(),
+            {
+              _id: notification._id,
+              title: notification.title,
+              message: notification.message,
+              type: notification.type,
+              category: notification.category,
+              priority: notification.priority,
+              action: notification.action,
+              relatedId: notification.relatedId,
+              read: false,
+              createdAt: notification.createdAt
+            }
+          );
+        });
+        console.log(`[NOTIFICATIONS] 🔌 Emitted ${created.length} real-time notifications`);
+      }
     } else {
       console.warn(`[NOTIFICATIONS] ⚠️ No notifications to create for event: ${eventType}`);
     }
