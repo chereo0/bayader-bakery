@@ -14,6 +14,41 @@ const DriverDashboard: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<string>('Dashboard')
   const { token } = useAuth()
   
+  // Apply dark mode based on localStorage theme and listen for changes
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+
+    // Apply theme immediately on mount
+    const theme = localStorage.getItem('theme') || 'light'
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+
+    // Listen for custom theme change event from Settings page
+    const handleThemeChange = (event: any) => {
+      const theme = event.detail?.theme || 'light'
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    }
+
+    window.addEventListener('themeChanged', handleThemeChange)
+
+    return () => {
+      window.removeEventListener('themeChanged', handleThemeChange)
+    }
+  }, [])
+  
   // Connect to WebSocket on mount
   useEffect(() => {
     if (!token) return
@@ -80,7 +115,7 @@ const DriverDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F1E8]">
+    <div className="min-h-screen bg-[#F5F1E8] dark:bg-gray-900">
       <DriverNavbar />
       <div className="flex">
         <DriverSidebar selected={selectedTab} onSelect={setSelectedTab} />
@@ -90,6 +125,7 @@ const DriverDashboard: React.FC = () => {
           </main>
         </div>
       </div>
+      <Toaster />
     </div>
   )
 }

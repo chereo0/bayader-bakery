@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 
 interface DriverSettings {
@@ -13,7 +13,6 @@ interface DriverSettings {
     push: boolean
   }
   preferences: {
-    language: 'en' | 'ar'
     theme: 'light' | 'dark'
   }
 }
@@ -31,10 +30,23 @@ const SettingsPage: React.FC = () => {
       push: true
     },
     preferences: {
-      language: 'en',
-      theme: 'light'
+      theme: localStorage.getItem('theme') as 'light' | 'dark' || 'light'
     }
   })
+
+  // Apply theme changes to DOM and save to localStorage
+  useEffect(() => {
+    const htmlElement = document.documentElement
+    if (settings.preferences.theme === 'dark') {
+      htmlElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      htmlElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+    // Dispatch custom event to notify other components of theme change
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: settings.preferences.theme } }))
+  }, [settings.preferences.theme])
 
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -66,67 +78,68 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="bg-[#fffaf4] rounded-lg shadow-sm p-6 max-w-2xl">
-      <h2 className="text-2xl font-semibold text-[#5E372E] mb-6">Driver Settings</h2>
+    <div className="bg-[#fffaf4] dark:bg-gray-900 rounded-lg shadow-sm p-6 max-w-2xl">
+      <h2 className="text-2xl font-semibold text-[#5E372E] dark:text-[#d4a574] mb-6">Driver Settings</h2>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+        <div className="mb-4 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded">
+        <div className="mb-4 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded">
           Settings saved successfully!
         </div>
       )}
 
       <div className="space-y-6">
         {/* Profile Settings */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-[#5E372E] mb-4">Profile</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-[#5E372E] dark:text-[#d4a574] mb-4">Profile</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#6b4f45] mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
               <input
                 type="text"
                 value={settings.profile.name}
                 onChange={e => updateSetting('profile', 'name', e.target.value)}
-                className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
-                aria-label="Full name"
+                title="Full name"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#5E372E] focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#6b4f45] mb-1">Phone</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone</label>
               <input
                 type="tel"
                 value={settings.profile.phone}
                 onChange={e => updateSetting('profile', 'phone', e.target.value)}
-                className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
-                aria-label="Phone number"
+                title="Phone number"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#5E372E] focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#6b4f45] mb-1">Vehicle</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vehicle</label>
               <input
                 type="text"
                 value={settings.profile.vehicle}
                 onChange={e => updateSetting('profile', 'vehicle', e.target.value)}
                 placeholder="e.g., Toyota Hiace - White"
-                className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                title="Vehicle information"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#5E372E] focus:border-transparent"
               />
             </div>
           </div>
         </div>
 
         {/* Notification Settings */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-[#5E372E] mb-4">Notifications</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-[#5E372E] dark:text-[#d4a574] mb-4">Notifications</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-[#6b4f45]">Order Updates</p>
-                <p className="text-xs text-[#8b6f63]">Get notified about new orders</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Order Updates</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Get notified about new orders</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -136,13 +149,13 @@ const SettingsPage: React.FC = () => {
                   className="sr-only peer"
                   aria-label="Toggle order updates notifications"
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E]"></div>
+                <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E] dark:peer-checked:bg-[#d4a574]"></div>
               </label>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-[#6b4f45]">Delivery Alerts</p>
-                <p className="text-xs text-[#8b6f63]">Alerts for delivery instructions</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Delivery Alerts</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Alerts for delivery instructions</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -152,13 +165,13 @@ const SettingsPage: React.FC = () => {
                   className="sr-only peer"
                   aria-label="Toggle delivery alerts notifications"
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E]"></div>
+                <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E] dark:peer-checked:bg-[#d4a574]"></div>
               </label>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-[#6b4f45]">Push Notifications</p>
-                <p className="text-xs text-[#8b6f63]">Mobile push notifications</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Push Notifications</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Mobile push notifications</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -168,40 +181,26 @@ const SettingsPage: React.FC = () => {
                   className="sr-only peer"
                   aria-label="Toggle push notifications"
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E]"></div>
+                <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5E372E] dark:peer-checked:bg-[#d4a574]"></div>
               </label>
             </div>
           </div>
         </div>
 
         {/* Preferences */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-[#5E372E] mb-4">Preferences</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#6b4f45] mb-1">Language</label>
-              <select
-                value={settings.preferences.language}
-                onChange={e => updateSetting('preferences', 'language', e.target.value as 'en' | 'ar')}
-                className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
-                aria-label="Select language preference"
-              >
-                <option value="en">English</option>
-                <option value="ar">العربية</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#6b4f45] mb-1">Theme</label>
-              <select
-                value={settings.preferences.theme}
-                onChange={e => updateSetting('preferences', 'theme', e.target.value as 'light' | 'dark')}
-                className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
-                aria-label="Select theme preference"
-              >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-            </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-[#5E372E] dark:text-[#d4a574] mb-4">Preferences</h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Theme</label>
+            <select
+              value={settings.preferences.theme}
+              onChange={e => updateSetting('preferences', 'theme', e.target.value as 'light' | 'dark')}
+              title="Select theme"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#5E372E] focus:border-transparent"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
           </div>
         </div>
 
@@ -209,7 +208,7 @@ const SettingsPage: React.FC = () => {
         <div className="flex gap-3 justify-end">
           <button
             onClick={handleSaveSettings}
-            className="px-6 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors font-medium"
+            className="px-6 py-2 bg-[#5E372E] dark:bg-[#a0794a] text-white rounded-lg hover:bg-[#6b453f] dark:hover:bg-[#8f6a3b] transition-colors font-medium"
           >
             Save Settings
           </button>
