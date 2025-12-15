@@ -20,8 +20,8 @@ export default function Header(){
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchUnreadCount()
-      // Poll for new notifications every 5 seconds for real-time updates
-      const interval = setInterval(fetchUnreadCount, 5000)
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000)
       return () => clearInterval(interval)
     }
   }, [isAuthenticated, user])

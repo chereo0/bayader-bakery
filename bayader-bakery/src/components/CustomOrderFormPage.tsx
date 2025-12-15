@@ -158,12 +158,12 @@ export default function CustomOrderFormPage() {
               </label>
               <input
                 type="number"
-                title="Quantity"
-                placeholder="Enter quantity"
                 name="quantity"
                 value={formData.quantity}
                 onChange={handleChange}
                 min="1"
+                title="Enter quantity"
+                placeholder="Enter quantity"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 required
               />
@@ -176,12 +176,11 @@ export default function CustomOrderFormPage() {
               </label>
               <input
                 type="date"
-                title="Delivery Date"
-                placeholder="YYYY-MM-DD"
                 name="deliveryDate"
                 value={formData.deliveryDate}
                 onChange={handleChange}
                 min={new Date().toISOString().split("T")[0]}
+                title="Select delivery date"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 required
               />

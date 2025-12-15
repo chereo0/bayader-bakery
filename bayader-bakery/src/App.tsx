@@ -43,26 +43,26 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
 
 export default function App(){
   return (
-    <AuthProvider>
-      <CartProvider>
+    <CartProvider>
+      <AuthProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
-          <Route path="/driver/*" element={
+          <Route path="/driver" element={
             <ProtectedRoute requiredRoles={['driver']}>
               <DriverDashboard />
             </ProtectedRoute>
           } />
-          <Route path="/staff/*" element={
+          <Route path="/staff" element={
             <ProtectedRoute requiredRoles={['staff']}>
               <StaffLayout />
             </ProtectedRoute>
           } />
-          <Route path="/staff-admin/*" element={
+          <Route path="/staff-admin" element={
             <ProtectedRoute adminOnly>
               <StaffDashboard />
             </ProtectedRoute>
           } />
-          <Route path="/admin/*" element={
+          <Route path="/admin" element={
             <ProtectedRoute adminOnly>
               <AdminDashboard />
             </ProtectedRoute>
@@ -126,7 +126,7 @@ export default function App(){
           } />
         </Routes>
       </BrowserRouter>
-    </CartProvider>
     </AuthProvider>
+    </CartProvider>
   )
 }

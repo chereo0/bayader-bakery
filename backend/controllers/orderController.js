@@ -5,7 +5,6 @@ const User = require('../models/User');
 const logger = require('../utils/logger');
 const { getNextOrderNumber } = require('../utils/orderNumberGenerator');
 const { sendOrderCreatedEmail, sendOrderStatusChangedEmail } = require('../services/emailService');
-const { sendNotifications } = require('../utils/notificationHelper');
 
 // Validate delivery address
 const validateDeliveryAddress = (address) => {
@@ -114,7 +113,7 @@ const validatePayment = (payment) => {
 // Create a new order (customer)
 const createOrder = async (req, res, next) => {
   try {
-    const { items, deliveryAddress, payment, isPickup, pickupLocation, phone } = req.body;
+    const { items, deliveryAddress, payment } = req.body;
     const userId = req.user?.id;
 
     // Validate userId
@@ -127,17 +126,8 @@ const createOrder = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Order items are required' });
     }
 
-    // Validate delivery address or pickup location based on order type
-    if (isPickup) {
-      if (!pickupLocation) {
-        return res.status(400).json({ success: false, message: 'Pickup location is required for pickup orders' });
-      }
-      if (!phone) {
-        return res.status(400).json({ success: false, message: 'Phone number is required for pickup orders' });
-      }
-    } else {
-      validateDeliveryAddress(deliveryAddress);
-    }
+    // Validate delivery address
+    validateDeliveryAddress(deliveryAddress);
 
     // Validate payment
     const validatedPayment = validatePayment(payment);
@@ -205,24 +195,14 @@ const createOrder = async (req, res, next) => {
     logger.info(`Generated orderNumber: ${orderNumber}`);
 
     // Create order document with pre-generated orderNumber
-    const orderData = {
+    const order = new Order({
       user: userId,
       items: orderItems,
       totalAmount: total,
+      deliveryAddress,
       payment: validatedPayment,
       orderNumber: orderNumber, // Set orderNumber explicitly before save
-      isPickup: isPickup || false,
-    };
-
-    // Add delivery address or pickup info based on order type
-    if (isPickup) {
-      orderData.pickupLocation = pickupLocation;
-      orderData.phone = phone;
-    } else {
-      orderData.deliveryAddress = deliveryAddress;
-    }
-
-    const order = new Order(orderData);
+    });
 
     // Save order with explicit error handling
     await order.save();
@@ -243,14 +223,6 @@ const createOrder = async (req, res, next) => {
       }
     } catch (emailError) {
       logger.error('Failed to send order creation email:', emailError);
-    }
-
-    // Send notifications to customer, staff, and admins
-    try {
-      const socketHelpers = req.app.get('socketHelpers');
-      await sendNotifications('orderCreated', order, { socketHelpers });
-    } catch (notifError) {
-      logger.error('Failed to send order creation notifications:', notifError);
     }
 
     res.status(201).json({ 
@@ -343,8 +315,7 @@ const getAllOrders = async (req, res, next) => {
       .sort('-createdAt')
       .skip(skip)
       .limit(limitNum)
-      .populate('user', 'name email phone')
-      .populate('assignedDriver', 'name email phone')
+      .populate('user', 'name email')
       .lean();
     
     const total = await Order.countDocuments(filter);
@@ -371,11 +342,6 @@ const getAllOrders = async (req, res, next) => {
 
 // Update order status (admin/staff/driver)
 const updateOrderStatus = async (req, res, next) => {
-  console.log('\n\n');
-  console.log('='.repeat(80));
-  console.log('[UPDATE-ORDER-STATUS] ========== FUNCTION CALLED ==========');
-  console.log('[UPDATE-ORDER-STATUS] 📥 Request:', { orderId: req.params.id, newStatus: req.body.status, userId: req.user?._id, userName: req.user?.name });
-  console.log('='.repeat(80));
   try {
     const { status } = req.body;
     const { id } = req.params;
@@ -389,7 +355,6 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     const order = await Order.findById(id);
-    console.log('[UPDATE-ORDER-STATUS] 📦 Order found:', { id: order?._id, orderNumber: order?.orderNumber, currentStatus: order?.status });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
@@ -431,12 +396,10 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     const prevStatus = order.status;
-    console.log('[UPDATE-ORDER-STATUS] ✅ Validation passed. Changing status:', prevStatus, '→', status);
     
     // Handle material deduction when order becomes active
     let materialDeductionResult = null;
     if (status === 'active' && prevStatus !== 'active') {
-      console.log('[UPDATE-ORDER-STATUS] 🔧 Handling material deduction for active status');
       const session = await Order.startSession();
       try {
         await session.withTransaction(async () => {
@@ -468,22 +431,16 @@ const updateOrderStatus = async (req, res, next) => {
       }
     } else {
       // Normal status update without material deduction
-      console.log('[UPDATE-ORDER-STATUS] 💾 Performing normal status update (no material deduction)');
       order.status = status;
       await order.save();
-      console.log('[UPDATE-ORDER-STATUS] ✅ Order saved to database');
     }
 
     logger.info(`Order ${id} status updated from ${prevStatus} to ${status}`);
-    console.log('[ORDER-STATUS] ✅ Order status saved to database');
-    console.log('[ORDER-STATUS] 📧 About to send email...');
 
     // Send order status change email (don't wait for it)
     try {
       const customer = await User.findById(order.user);
-      console.log('[ORDER-STATUS] 👤 Customer found:', customer?._id);
       if (customer && prevStatus !== status) {
-        console.log('[ORDER-STATUS] 📧 Sending email to:', customer.email);
         sendOrderStatusChangedEmail(customer, {
           orderId: order.orderNumber,
           status: order.status,
@@ -494,32 +451,6 @@ const updateOrderStatus = async (req, res, next) => {
       }
     } catch (emailError) {
       logger.error('Failed to send order status change email:', emailError);
-      console.error('[ORDER-STATUS] ❌ Email error:', emailError);
-    }
-
-    console.log('[ORDER-STATUS] 🔔 About to send notifications...');
-    console.log('[ORDER-STATUS] 🔔 sendNotifications function exists?', typeof sendNotifications);
-    console.log('[ORDER-STATUS] 🔔 Order object:', { id: order._id, orderNumber: order.orderNumber, user: order.user });
-    // Send notifications to customer and staff
-    try {
-      console.log('[ORDER-STATUS] 🔔 INSIDE TRY BLOCK - Sending notifications for orderStatusChanged:', {
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        userId: order.user,
-        newStatus: status,
-        actorId: req.user?.id
-      });
-      const socketHelpers = req.app.get('socketHelpers');
-      await sendNotifications('orderStatusChanged', order, { 
-        newStatus: status,
-        actor: req.user?.id,  // Pass ObjectId string, not full JWT object
-        actorName: req.user?.name || req.user?.email?.split('@')[0] || 'Admin',
-        socketHelpers
-      });
-      console.log('[ORDER-STATUS] ✅ Notifications sent successfully');
-    } catch (notifError) {
-      logger.error('Failed to send order status change notifications:', notifError);
-      console.error('[ORDER-STATUS] ❌ Full error:', notifError);
     }
 
     const response = { 
@@ -533,11 +464,8 @@ const updateOrderStatus = async (req, res, next) => {
       response.materialDeductions = materialDeductionResult.deductions;
     }
 
-    console.log('[UPDATE-ORDER-STATUS] 📤 Sending response to client:', { success: true, prevStatus, newStatus: status });
     res.json(response);
-    console.log('[UPDATE-ORDER-STATUS] ========== FUNCTION COMPLETED ==========\n\n');
   } catch (error) {
-    console.error('[UPDATE-ORDER-STATUS] ❌❌❌ CAUGHT ERROR:', error.message);
     logger.error('Error updating order status', error);
     next(error);
   }
@@ -880,14 +808,6 @@ const assignOrderToDriver = async (req, res, next) => {
 
     logger.info(`Order ${id} assigned to driver ${driverId}`);
 
-    // Send notifications to driver and customer
-    try {
-      const socketHelpers = req.app.get('socketHelpers');
-      await sendNotifications('orderAssignedDriver', order, { driver, socketHelpers });
-    } catch (notifError) {
-      logger.error('Failed to send driver assignment notifications:', notifError);
-    }
-
     res.json({ 
       success: true, 
       data: order,
@@ -895,341 +815,6 @@ const assignOrderToDriver = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error assigning driver to order', error);
-    next(error);
-  }
-};
-
-// Admin/Staff: Add note to order
-const addOrderNote = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { content } = req.body;
-    
-    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ success: false, message: 'Invalid order ID format' });
-    }
-    
-    if (!content || !content.trim()) {
-      return res.status(400).json({ success: false, message: 'Note content is required' });
-    }
-    
-    const order = await Order.findById(id);
-    if (!order) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Order not found' 
-      });
-    }
-    
-    // Initialize notes array if it doesn't exist
-    if (!order.notes) {
-      order.notes = [];
-    }
-    
-    // Add new note
-    order.notes.push({
-      addedBy: req.user.userId,
-      content: content.trim(),
-      createdAt: new Date()
-    });
-    
-    await order.save();
-    
-    // Populate the newly added note's user info
-    await order.populate('notes.addedBy', 'name email role');
-    
-    logger.info(`Note added to order ${id} by user ${req.user.userId}`);
-    
-    res.json({ 
-      success: true, 
-      message: 'Note added successfully',
-      data: order 
-    });
-  } catch (error) {
-    logger.error('Error adding order note', error);
-    next(error);
-  }
-};
-
-// Driver: Accept order assignment
-const acceptOrder = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const driverId = req.user.id;
-
-    const order = await Order.findById(id).populate('user', 'name email phone');
-
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-
-    // Verify this driver is assigned to this order
-    if (!order.assignedDriver || order.assignedDriver.toString() !== driverId) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You are not assigned to this order' 
-      });
-    }
-
-    // Check if already accepted or rejected
-    if (order.assignmentStatus === 'accepted') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Order already accepted' 
-      });
-    }
-
-    if (order.assignmentStatus === 'rejected') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cannot accept a rejected order' 
-      });
-    }
-
-    // Update assignment status
-    order.assignmentStatus = 'accepted';
-    order.assignmentHistory.push({
-      driver: driverId,
-      status: 'accepted',
-      timestamp: new Date()
-    });
-
-    // Update delivery status if still pending
-    if (order.deliveryStatus === 'pending' || order.deliveryStatus === 'assigned') {
-      order.deliveryStatus = 'assigned';
-    }
-
-    await order.save();
-
-    // Get driver info for notifications
-    const driver = await User.findById(driverId).select('name phone email');
-
-    // Send notifications to admin and staff
-    try {
-      const socketHelpers = req.app.get('socketHelpers');
-      await sendNotifications('orderAcceptedByDriver', order, { driver, socketHelpers });
-    } catch (notifError) {
-      console.error('[ACCEPT-ORDER] Notification error:', notifError);
-    }
-
-    console.log(`[ACCEPT-ORDER] Driver ${driverId} accepted order ${id}`);
-
-    res.json({
-      success: true,
-      message: 'Order accepted successfully',
-      data: order
-    });
-  } catch (error) {
-    console.error('[ACCEPT-ORDER] Error:', error);
-    next(error);
-  }
-};
-
-// Driver: Reject order assignment
-const rejectOrder = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const driverId = req.user.id;
-
-    if (!reason || reason.trim().length < 5) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide a reason for rejection (minimum 5 characters)' 
-      });
-    }
-
-    const order = await Order.findById(id).populate('user', 'name email phone');
-
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-
-    // Verify this driver is assigned to this order
-    if (!order.assignedDriver || order.assignedDriver.toString() !== driverId) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You are not assigned to this order' 
-      });
-    }
-
-    // Check if already accepted
-    if (order.assignmentStatus === 'accepted') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cannot reject an accepted order. Please contact admin.' 
-      });
-    }
-
-    // Update assignment status
-    order.assignmentStatus = 'rejected';
-    order.assignmentHistory.push({
-      driver: driverId,
-      status: 'rejected',
-      reason: reason.trim(),
-      timestamp: new Date()
-    });
-
-    // Unassign driver
-    order.assignedDriver = null;
-    order.deliveryStatus = 'pending';
-
-    await order.save();
-
-    // Get driver info for notifications
-    const driver = await User.findById(driverId).select('name phone email');
-
-    // Send notifications to admin and staff about rejection
-    try {
-      const socketHelpers = req.app.get('socketHelpers');
-      await sendNotifications('orderRejectedByDriver', order, { driver, reason: reason.trim(), socketHelpers });
-    } catch (notifError) {
-      console.error('[REJECT-ORDER] Notification error:', notifError);
-    }
-
-    console.log(`[REJECT-ORDER] Driver ${driverId} rejected order ${id}. Reason: ${reason}`);
-
-    res.json({
-      success: true,
-      message: 'Order rejected successfully. It will be reassigned.',
-      data: order
-    });
-  } catch (error) {
-    console.error('[REJECT-ORDER] Error:', error);
-    next(error);
-  }
-};
-
-// Driver: Report delivery issue
-const reportDeliveryIssue = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { issueType, description, photoUrl, latitude, longitude } = req.body;
-    const driverId = req.user.id;
-
-    // Validate required fields
-    if (!issueType) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Issue type is required' 
-      });
-    }
-
-    if (!description || description.trim().length < 10) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Description is required (minimum 10 characters)' 
-      });
-    }
-
-    const order = await Order.findById(id).populate('user', 'name email phone');
-
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-
-    // Verify this driver is assigned to this order
-    if (!order.assignedDriver || order.assignedDriver.toString() !== driverId) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You are not assigned to this order' 
-      });
-    }
-
-    // Create delivery issue
-    const DeliveryIssue = require('../models/DeliveryIssue');
-    
-    const issueData = {
-      order: id,
-      driver: driverId,
-      issueType,
-      description: description.trim(),
-      status: 'reported',
-      priority: issueType === 'damaged-product' || issueType === 'access-denied' ? 'high' : 'medium'
-    };
-
-    if (photoUrl) {
-      issueData.photoUrl = photoUrl;
-    }
-
-    if (latitude && longitude) {
-      issueData.location = {
-        type: 'Point',
-        coordinates: [longitude, latitude]
-      };
-    }
-
-    const issue = await DeliveryIssue.create(issueData);
-
-    // Get driver info for notifications
-    const driver = await User.findById(driverId).select('name phone email');
-
-    // Send notifications to admin and staff
-    try {
-      const socketHelpers = req.app.get('socketHelpers');
-      await sendNotifications('deliveryIssueReported', order, { issue, driver, socketHelpers });
-    } catch (notifError) {
-      console.error('[REPORT-ISSUE] Notification error:', notifError);
-    }
-
-    console.log(`[REPORT-ISSUE] Driver ${driverId} reported ${issueType} for order ${id}`);
-
-    res.status(201).json({
-      success: true,
-      message: 'Delivery issue reported successfully',
-      data: issue
-    });
-  } catch (error) {
-    console.error('[REPORT-ISSUE] Error:', error);
-    next(error);
-  }
-};
-
-// @route   GET /api/orders/driver/stats/today
-// @desc    Get today's delivery stats for driver
-// @access  Private (Driver)
-const getDriverTodayStats = async (req, res, next) => {
-  try {
-    const driverId = req.user.id;
-    
-    // Get start and end of today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    // Get today's completed deliveries
-    const completedDeliveries = await Order.countDocuments({
-      assignedDriver: driverId,
-      deliveryStatus: 'delivered',
-      updatedAt: { $gte: startOfDay, $lte: endOfDay }
-    });
-    
-    // Get today's earnings - using find instead of aggregate to avoid ObjectId issues
-    const todayOrders = await Order.find({
-      assignedDriver: driverId,
-      deliveryStatus: 'delivered',
-      updatedAt: { $gte: startOfDay, $lte: endOfDay }
-    }).select('totalAmount');
-    
-    const todayEarnings = todayOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    
-    // Get active orders (pending, accepted, in-transit)
-    const activeOrders = await Order.countDocuments({
-      assignedDriver: driverId,
-      deliveryStatus: { $in: ['pending', 'accepted', 'in-transit'] }
-    });
-    
-    res.json({
-      success: true,
-      data: {
-        completedToday: completedDeliveries,
-        earningsToday: todayEarnings,
-        activeOrders
-      }
-    });
-  } catch (error) {
-    console.error('[DRIVER-STATS] Error:', error);
     next(error);
   }
 };
@@ -1244,11 +829,6 @@ module.exports = {
   getStaffOrders,
   getStaffOrderStats,
   getDriverOrders,
-  getDriverTodayStats,
   updateDeliveryStatus,
   assignOrderToDriver,
-  addOrderNote,
-  acceptOrder,
-  rejectOrder,
-  reportDeliveryIssue,
 };

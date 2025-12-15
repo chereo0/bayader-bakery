@@ -58,26 +58,17 @@ export default function NotificationsPage() {
   };
 
   const markAsRead = async (notificationId: string) => {
-    console.log('[FRONTEND-MARK] 🔵 markAsRead() called for:', notificationId);
     try {
-      console.log('[FRONTEND-MARK] 🔵 Sending PUT request to:', `/api/notifications/${notificationId}/read`);
       const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
-      console.log('[FRONTEND-MARK] 🔵 Response status:', response.status);
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.log('[FRONTEND-MARK] ❌ Response not ok:', errorText);
         throw new Error("Failed to mark as read");
       }
-
-      const data = await response.json();
-      console.log('[FRONTEND-MARK] ✅ Response data:', data);
 
       setNotifications(
         notifications.map((n) =>
@@ -87,7 +78,6 @@ export default function NotificationsPage() {
 
       setToast({ type: "success", message: "Marked as read" });
     } catch (err) {
-      console.log('[FRONTEND-MARK] ❌ Error:', err);
       setToast({
         type: "error",
         message: err instanceof Error ? err.message : "Failed to update",
@@ -96,31 +86,21 @@ export default function NotificationsPage() {
   };
 
   const markAllAsRead = async () => {
-    console.log('[FRONTEND-MARK-ALL] 🔵 markAllAsRead() called');
     try {
-      console.log('[FRONTEND-MARK-ALL] 🔵 Sending PUT request to: /api/notifications/mark-all/read');
-      const response = await fetch("/api/notifications/mark-all/read", {
-        method: "PUT",
+      const response = await fetch("/api/notifications/read-all", {
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
-      console.log('[FRONTEND-MARK-ALL] 🔵 Response status:', response.status);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.log('[FRONTEND-MARK-ALL] ❌ Response not ok:', errorText);
         throw new Error("Failed to mark all as read");
       }
-
-      const data = await response.json();
-      console.log('[FRONTEND-MARK-ALL] ✅ Response data:', data);
 
       setNotifications(notifications.map((n) => ({ ...n, read: true })));
       setToast({ type: "success", message: "All marked as read" });
     } catch (err) {
-      console.log('[FRONTEND-MARK-ALL] ❌ Error:', err);
       setToast({
         type: "error",
         message: err instanceof Error ? err.message : "Failed to update",
@@ -244,11 +224,6 @@ export default function NotificationsPage() {
                         <p className="text-gray-700 mt-1">
                           {notification.message}
                         </p>
-                        {(notification as any).actorName && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            <span className="font-medium">By:</span> {(notification as any).actorName}
-                          </p>
-                        )}
                       </div>
                       {!notification.read && (
                         <span className="flex-shrink-0 ml-2 w-2 h-2 bg-blue-600 rounded-full mt-2"></span>

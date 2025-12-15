@@ -12,13 +12,8 @@ const {
   getStaffOrders,
   getStaffOrderStats,
   getDriverOrders,
-  getDriverTodayStats,
   updateDeliveryStatus,
   assignOrderToDriver,
-  addOrderNote,
-  acceptOrder,
-  rejectOrder,
-  reportDeliveryIssue,
 } = require('../controllers/orderController');
 
 // Customer: create order
@@ -30,8 +25,8 @@ router.get('/my', auth, getMyOrders);
 // Driver: get my assigned orders
 router.get('/driver/my-orders', auth, requireRole('driver'), getDriverOrders);
 
-// Driver: get today's stats
-router.get('/driver/stats/today', auth, requireRole('driver'), getDriverTodayStats);
+// Driver: get today's stats (TODO: implement getDriverTodayStats in orderController)
+// router.get('/driver/stats/today', auth, requireRole('driver'), getDriverTodayStats);
 
 // Get order by id (owner or admin/staff/driver)
 router.get('/:id', auth, getOrderById);
@@ -57,17 +52,17 @@ router.patch('/:id/delivery-status', auth, requireRole('driver'), updateDelivery
 // Admin/Staff: assign order to driver
 router.patch('/:id/assign-driver', auth, requireRole('admin', 'staff'), assignOrderToDriver);
 
-// Admin/Staff: add note to order
-router.post('/:id/notes', auth, requireRole('admin', 'staff'), addOrderNote);
+// Admin/Staff: add note to order (TODO: implement addOrderNote in orderController)
+// router.post('/:id/notes', auth, requireRole('admin', 'staff'), addOrderNote);
 
-// Driver: accept order assignment
-router.post('/:id/accept', auth, requireRole('driver'), acceptOrder);
+// Driver: accept order assignment (TODO: implement acceptOrder in orderController)
+// router.post('/:id/accept', auth, requireRole('driver'), acceptOrder);
 
-// Driver: reject order assignment
-router.post('/:id/reject', auth, requireRole('driver'), rejectOrder);
+// Driver: reject order assignment (TODO: implement rejectOrder in orderController)
+// router.post('/:id/reject', auth, requireRole('driver'), rejectOrder);
 
-// Driver: report delivery issue
-router.post('/:id/report-issue', auth, requireRole('driver'), reportDeliveryIssue);
+// Driver: report delivery issue (TODO: implement reportDeliveryIssue in orderController)
+// router.post('/:id/report-issue', auth, requireRole('driver'), reportDeliveryIssue);
 
 // Customer: cancel order
 router.patch('/:id/cancel', auth, cancelOrder);

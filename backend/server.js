@@ -31,14 +31,13 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/cart', require('./routes/cart'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/event-bookings', require('./routes/eventBookingRoutes'));
 app.use('/api/custom-orders', require('./routes/customOrderRoutes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/drivers', require('./routes/drivers'));
-app.use('/api/driver/location', require('./routes/driverLocation'));
 app.use('/api/messages', require('./routes/messages'));
-app.use('/api/order-issues', require('./routes/orderIssues'));
 app.use('/api/inventory-alerts', require('./routes/inventoryAlerts'));
 app.use('/api/production', require('./routes/production'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -79,35 +78,13 @@ async function start() {
       logger.info(`Server listening on port ${config.PORT}`);
     });
 
-    // Initialize Socket.IO
-    const { Server } = require('socket.io');
-    const io = new Server(server, {
-      cors: {
-        origin: config.FRONTEND_URL === '*' ? '*' : config.FRONTEND_URL,
-        methods: ['GET', 'POST']
-      }
-    });
-
-    // Make io available to routes
-    app.set('io', io);
-
-    // Socket.IO connection handling
-    const socketHandler = require('./utils/socketHandler');
-    const socketHelpers = socketHandler(io);
-    
-    // Make socket helpers available to routes
-    app.set('socketHelpers', socketHelpers);
-    
-    logger.info('Socket.IO initialized');
-
     // Graceful shutdown
     const shutdown = async () => {
       logger.info('Shutting down server...');
       try {
-        io.close();
         await closeDB();
       } catch (e) {
-        logger.warn('Error during shutdown:', e.message);
+        logger.warn('Error during DB close:', e.message);
       }
       server.close(() => process.exit(0));
     };

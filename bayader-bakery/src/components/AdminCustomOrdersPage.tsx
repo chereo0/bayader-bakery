@@ -187,9 +187,9 @@ export default function AdminCustomOrdersPage() {
         <div className="mb-6 flex items-center gap-4">
           <Filter className="w-5 h-5 text-gray-600" />
           <select
-            title="Filter by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            title="Filter orders by status"
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Orders</option>
@@ -270,8 +270,6 @@ export default function AdminCustomOrdersPage() {
                         {editingId === order._id ? (
                           <input
                             type="number"
-                            placeholder="Estimated price"
-                            title="Estimated Price"
                             value={editData.estimatedPrice || ""}
                             onChange={(e) =>
                               setEditData({
@@ -279,6 +277,8 @@ export default function AdminCustomOrdersPage() {
                                 estimatedPrice: parseFloat(e.target.value) || 0,
                               })
                             }
+                            title="Enter estimated price"
+                            placeholder="0.00"
                             className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
                             step="0.01"
                             min="0"
@@ -295,7 +295,6 @@ export default function AdminCustomOrdersPage() {
                       <td className="px-6 py-4">
                         {editingId === order._id ? (
                           <select
-                            title="Select status"
                             value={editData.status || order.status}
                             onChange={(e) =>
                               setEditData({
@@ -303,6 +302,7 @@ export default function AdminCustomOrdersPage() {
                                 status: e.target.value,
                               })
                             }
+                            title="Select order status"
                             className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
                           >
                             {statusOptions.map((status) => (

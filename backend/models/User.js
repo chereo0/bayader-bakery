@@ -94,6 +94,36 @@ const userSchema = new mongoose.Schema({
       timezone: { type: String, default: 'UTC+3' }
     }
   },
+  cart: {
+    items: [{
+      productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+        required: true
+      },
+      name: {
+        type: String,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true
+      },
+      image: {
+        type: String
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1,
+        default: 1
+      }
+    }],
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -116,9 +116,6 @@ exports.getUnreadCount = async (req, res) => {
 // Mark notification as read
 exports.markAsRead = async (req, res) => {
   try {
-    console.log('[NOTIFICATIONS-MARK] 🔵 markAsRead() called for notification:', req.params.id);
-    console.log('[NOTIFICATIONS-MARK] 🔵 User:', req.user?._id || req.user?.id);
-    
     const { id } = req.params;
 
     const notification = await Notification.findByIdAndUpdate(
@@ -131,15 +128,8 @@ exports.markAsRead = async (req, res) => {
     );
 
     if (!notification) {
-      console.log('[NOTIFICATIONS-MARK] ❌ Notification not found:', id);
       return res.status(404).json({ success: false, error: 'Notification not found' });
     }
-
-    console.log('[NOTIFICATIONS-MARK] ✅ Notification marked as read:', {
-      id: notification._id,
-      read: notification.read,
-      readAt: notification.readAt
-    });
 
     logger.info(`Notification marked as read: ${id}`);
 
@@ -149,7 +139,6 @@ exports.markAsRead = async (req, res) => {
       data: notification
     });
   } catch (error) {
-    console.log('[NOTIFICATIONS-MARK] ❌ Error:', error.message);
     logger.error('Error marking notification as read', error);
     res.status(500).json({ success: false, error: error.message });
   }
@@ -158,21 +147,12 @@ exports.markAsRead = async (req, res) => {
 // Mark all notifications as read
 exports.markAllAsRead = async (req, res) => {
   try {
-    console.log('[NOTIFICATIONS-MARK-ALL] 🔵 markAllAsRead() called for user:', req.user?._id || req.user?.id);
-    
-    const userId = req.user._id || req.user.id;
-    
-    // Check how many unread notifications exist
-    const unreadCount = await Notification.countDocuments({ recipient: userId, read: false });
-    console.log('[NOTIFICATIONS-MARK-ALL] 🔵 Found unread notifications:', unreadCount);
-    
     const result = await Notification.updateMany(
-      { recipient: userId, read: false },
+      { recipient: req.user._id, read: false },
       { read: true, readAt: new Date() }
     );
 
-    console.log('[NOTIFICATIONS-MARK-ALL] ✅ Updated:', result.modifiedCount, 'notifications');
-    logger.info(`All notifications marked as read for user ${userId}`, result);
+    logger.info(`All notifications marked as read for user ${req.user._id}`, result);
 
     res.json({
       success: true,
@@ -180,7 +160,6 @@ exports.markAllAsRead = async (req, res) => {
       data: { modifiedCount: result.modifiedCount }
     });
   } catch (error) {
-    console.log('[NOTIFICATIONS-MARK-ALL] ❌ Error:', error.message);
     logger.error('Error marking all notifications as read', error);
     res.status(500).json({ success: false, error: error.message });
   }

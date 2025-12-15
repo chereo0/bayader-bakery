@@ -14,18 +14,24 @@ interface CartContextShape {
   removeItem: (id: string) => void
   updateQuantity: (id: string, qty: number) => void
   clearCart: () => void
+  setCartItems: (items: CartItem[]) => void
+  getCartItems: () => CartItem[]
   showToast: (message: string) => void
   toast: { visible: boolean; message: string }
 }
 
 const CartContext = createContext<CartContextShape | undefined>(undefined)
 
-const CART_KEY = 'bayader_cart_v2'  // Updated to force clear old numeric IDs
+// Helper function to get cart key based on user
+const getCartKey = (userId?: string | null): string => {
+  return userId ? `bayader_cart_${userId}` : 'bayader_cart_guest'
+}
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
-      const raw = localStorage.getItem(CART_KEY)
+      // Try to load from guest cart first (will be replaced on login)
+      const raw = localStorage.getItem(getCartKey())
       return raw ? JSON.parse(raw) : []
     } catch (e) {
       return []
@@ -33,14 +39,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   })
 
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' })
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
+  // Update localStorage whenever items change
   useEffect(() => {
     try {
-      localStorage.setItem(CART_KEY, JSON.stringify(items))
+      const cartKey = getCartKey(currentUserId)
+      localStorage.setItem(cartKey, JSON.stringify(items))
     } catch (e) {
-      // ignore
+      console.error('Failed to save cart to localStorage:', e)
     }
-  }, [items])
+  }, [items, currentUserId])
+
+  // Load cart from localStorage when userId changes
+  useEffect(() => {
+    try {
+      const cartKey = getCartKey(currentUserId)
+      const raw = localStorage.getItem(cartKey)
+      if (raw) {
+        const savedItems = JSON.parse(raw)
+        setItems(savedItems)
+      }
+    } catch (e) {
+      console.error('Failed to load cart from localStorage:', e)
+    }
+  }, [currentUserId])
 
   const addItem = (item: Omit<CartItem, 'quantity'>, qty = 1) => {
     setItems(prev => {
@@ -59,7 +82,26 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems(prev => prev.map(p => p.id === id ? { ...p, quantity: qty } : p))
   }
 
-  const clearCart = () => setItems([])
+  const clearCart = () => {
+    setItems([])
+    // Also clear from localStorage
+    try {
+      const cartKey = getCartKey(currentUserId)
+      localStorage.removeItem(cartKey)
+      // Also clear guest cart if exists
+      localStorage.removeItem(getCartKey())
+    } catch (e) {
+      console.error('Failed to clear cart from localStorage:', e)
+    }
+  }
+
+  const setCartItems = (newItems: CartItem[]) => {
+    setItems(newItems)
+  }
+
+  const getCartItems = (): CartItem[] => {
+    return items
+  }
 
   const showToast = (message: string) => {
     setToast({ visible: true, message })
@@ -67,7 +109,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, showToast, toast }}>
+    <CartContext.Provider value={{ 
+      items, 
+      addItem, 
+      removeItem, 
+      updateQuantity, 
+      clearCart, 
+      setCartItems,
+      getCartItems,
+      showToast, 
+      toast 
+    }}>
       {children}
     </CartContext.Provider>
   )
