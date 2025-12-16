@@ -87,8 +87,8 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch("/api/notifications/read-all", {
-        method: "PATCH",
+      const response = await fetch("/api/notifications/mark-all/read", {
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -99,6 +99,8 @@ export default function NotificationsPage() {
       }
 
       setNotifications(notifications.map((n) => ({ ...n, read: true })));
+      // Immediately refresh unread badge
+      window.dispatchEvent(new Event('notifications-updated'))
       setToast({ type: "success", message: "All marked as read" });
     } catch (err) {
       setToast({

@@ -421,18 +421,24 @@ const EventsPublicPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#5E372E] mb-1">Number of Guests</label>
+                <label className="block text-sm font-medium text-[#5E372E] mb-1">Number of Tickets / Persons</label>
                 <input
                   type="number"
-                  min="1"
-                  title="Number of Guests"
+                  min={1}
+                  title="Number of Tickets"
                   placeholder="1"
                   value={bookingData.guests}
                   onChange={(e) =>
-                    setBookingData({ ...bookingData, guests: Math.max(1, parseInt(e.target.value)) })
+                    setBookingData({ ...bookingData, guests: Math.max(1, parseInt(e.target.value, 10) || 1) })
                   }
                   className="w-full border border-[#d4ac6f] rounded-lg px-3 py-2"
                 />
+                <p className="text-xs text-[#6b4f45] mt-1">
+                  {selectedEvent.perPersonPrice 
+                    ? `Total: $${(selectedEvent.perPersonPrice * bookingData.guests).toFixed(2)}`
+                    : 'Contact us for pricing'
+                  }
+                </p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">

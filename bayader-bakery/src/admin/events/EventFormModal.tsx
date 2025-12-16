@@ -71,35 +71,35 @@ const EventFormModal: React.FC<Props> = ({ open, event, onSave, onClose }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs">Event Type</label>
-            <select value={type} onChange={e=>setType(e.target.value)} className="w-full border px-3 py-2 rounded">
+            <label htmlFor="event-type" className="block text-sm font-medium text-[#5E372E] mb-1">Event Type</label>
+            <select id="event-type" value={type} onChange={e=>setType(e.target.value)} className="w-full border px-3 py-2 rounded">
               <option>Wedding</option>
               <option>Birthday</option>
               <option>Party</option>
             </select>
           </div>
           <div>
-            <label className="text-xs">Event Name</label>
-            <input required value={name} onChange={e=>setName(e.target.value)} className="w-full border px-3 py-2 rounded" />
+            <label htmlFor="event-name" className="block text-sm font-medium text-[#5E372E] mb-1">Event Name</label>
+            <input id="event-name" required value={name} onChange={e=>setName(e.target.value)} placeholder="Enter event name" className="w-full border px-3 py-2 rounded" />
           </div>
 
           <div>
-            <label className="text-xs">Date</label>
-            <input value={date} onChange={e=>setDate(e.target.value)} className="w-full border px-3 py-2 rounded" />
+            <label htmlFor="event-date" className="block text-sm font-medium text-[#5E372E] mb-1">Date</label>
+            <input id="event-date" type="date" value={date} onChange={e=>setDate(e.target.value)} placeholder="Select date" className="w-full border px-3 py-2 rounded" />
           </div>
           <div>
-            <label className="text-xs">Time</label>
-            <input value={time} onChange={e=>setTime(e.target.value)} className="w-full border px-3 py-2 rounded" />
+            <label htmlFor="event-time" className="block text-sm font-medium text-[#5E372E] mb-1">Time</label>
+            <input id="event-time" type="time" value={time} onChange={e=>setTime(e.target.value)} placeholder="Select time" className="w-full border px-3 py-2 rounded" />
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-xs">Venue</label>
-            <input value={venue} onChange={e=>setVenue(e.target.value)} className="w-full border px-3 py-2 rounded" />
+            <label htmlFor="event-venue" className="block text-sm font-medium text-[#5E372E] mb-1">Venue</label>
+            <input id="event-venue" value={venue} onChange={e=>setVenue(e.target.value)} placeholder="Enter venue location" className="w-full border px-3 py-2 rounded" />
           </div>
 
           <div>
-            <label className="text-xs">Base Price</label>
-            <input value={price} onChange={e=>setPrice(e.target.value)} className="w-full border px-3 py-2 rounded" />
+            <label htmlFor="event-price" className="block text-sm font-medium text-[#5E372E] mb-1">Base Price</label>
+            <input id="event-price" type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Enter base price" className="w-full border px-3 py-2 rounded" />
           </div>
 
           <div className="md:col-span-2">
@@ -110,9 +110,9 @@ const EventFormModal: React.FC<Props> = ({ open, event, onSave, onClose }) => {
             <div className="space-y-2">
               {services.map(s=> (
                 <div key={s.id} className="flex gap-2">
-                  <input placeholder="Service name" value={s.name} onChange={e=>updateService(s.id,'name',e.target.value)} className="flex-1 border px-3 py-2 rounded" />
-                  <input placeholder="Price" value={s.price} onChange={e=>updateService(s.id,'price',e.target.value)} className="w-28 border px-3 py-2 rounded" />
-                  <button type="button" onClick={()=>removeService(s.id)} className="px-3 rounded bg-red-600 text-white">x</button>
+                  <input aria-label="Service name" placeholder="Service name" value={s.name} onChange={e=>updateService(s.id,'name',e.target.value)} className="flex-1 border px-3 py-2 rounded" />
+                  <input aria-label="Service price" type="number" placeholder="Price" value={s.price} onChange={e=>updateService(s.id,'price',e.target.value)} className="w-28 border px-3 py-2 rounded" />
+                  <button type="button" onClick={()=>removeService(s.id)} aria-label="Remove service" className="px-3 rounded bg-red-600 text-white">x</button>
                 </div>
               ))}
             </div>

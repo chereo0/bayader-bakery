@@ -41,8 +41,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />
   }
 
-  // Check required roles
-  if (requiredRoles && !requiredRoles.includes(user.role as 'admin' | 'staff' | 'driver')) {
+  // Check required roles (admin can access all roles)
+  if (requiredRoles && user.role !== 'admin' && !requiredRoles.includes(user.role as 'admin' | 'staff' | 'driver')) {
     return <Navigate to="/" replace />
   }
 

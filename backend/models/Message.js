@@ -44,6 +44,10 @@ const messageSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  archivedAt: {
+    type: Date,
+    default: null
+  },
   priority: {
     type: String,
     enum: ['low', 'normal', 'high', 'urgent'],

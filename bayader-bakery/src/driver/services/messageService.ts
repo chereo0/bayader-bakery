@@ -53,10 +53,11 @@ class MessageService {
   /**
    * Get all messages for the current user
    */
-  async getMessages(page = 1, limit = 20): Promise<Message[]> {
+  async getMessages(archived = false, page = 1, limit = 20): Promise<Message[]> {
     try {
-      const response = await this.api.get<MessageResponse>('/', {
-        params: { page, limit },
+      // Use conversations endpoint so archived filter is respected (sender OR receiver)
+      const response = await this.api.get<MessageResponse>('/conversations/all', {
+        params: { archived: archived.toString(), page, limit },
       })
 
       if (Array.isArray(response.data.data)) {
@@ -114,10 +115,12 @@ class MessageService {
    */
   async sendMessage(recipientId: string, subject: string, body: string): Promise<Message> {
     try {
+      // Backend expects { to, subject, message, type }
       const response = await this.api.post<MessageResponse>('/', {
-        recipientId,
+        to: recipientId,
         subject,
-        body,
+        message: body,
+        type: 'driver'
       })
       return response.data.data as Message
     } catch (error) {
@@ -127,7 +130,7 @@ class MessageService {
   }
 
   /**
-   * Delete a message
+   * Delete a message (archives it)
    */
   async deleteMessage(messageId: string): Promise<any> {
     try {
@@ -135,6 +138,32 @@ class MessageService {
       return response.data
     } catch (error) {
       console.error(`Failed to delete message ${messageId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Archive a message
+   */
+  async archiveMessage(messageId: string): Promise<any> {
+    try {
+      const response = await this.api.delete(`/${messageId}`)
+      return response.data
+    } catch (error) {
+      console.error(`Failed to archive message ${messageId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Unarchive a message
+   */
+  async unarchiveMessage(messageId: string): Promise<any> {
+    try {
+      const response = await this.api.patch(`/${messageId}/unarchive`)
+      return response.data
+    } catch (error) {
+      console.error(`Failed to unarchive message ${messageId}:`, error)
       throw error
     }
   }

@@ -40,17 +40,17 @@ router.get('/', (req, res, next) => {
   next();
 }, notificationController.getNotifications);
 
-// Mark notification as read (parameterized route, MUST come after GET routes)
-router.put('/:id/read', (req, res, next) => {
-  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to markAsRead');
-  next();
-}, notificationController.markAsRead);
-
-// Mark all as read (MUST have explicit /mark-all/ path to avoid :id matching)
+// Mark all as read (MUST come BEFORE :id routes to avoid matching "mark-all" as an ID)
 router.put('/mark-all/read', (req, res, next) => {
   console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to markAllAsRead');
   next();
 }, notificationController.markAllAsRead);
+
+// Mark notification as read (parameterized route, MUST come after specific routes)
+router.put('/:id/read', (req, res, next) => {
+  console.log('[NOTIFICATIONS-ROUTE] 🟢 Routing to markAsRead');
+  next();
+}, notificationController.markAsRead);
 
 // Delete notification (parameterized route, MUST come after specific routes)
 router.delete('/:id', (req, res, next) => {

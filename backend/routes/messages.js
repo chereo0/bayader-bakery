@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 const {
   listMessages,
   getConversations,
@@ -9,6 +10,7 @@ const {
   markAsRead,
   markAsUnread,
   deleteMessage,
+  unarchiveMessage,
   getUnreadCount
 } = require('../controllers/messageController');
 
@@ -30,13 +32,21 @@ router.get('/:id', getMessage);
 // POST send message
 router.post('/', sendMessage);
 
-// PUT mark as read
+// PUT and PATCH mark as read (support both verbs for various clients)
 router.put('/:id/read', markAsRead);
+router.patch('/:id/read', auth, requireRole('admin', 'staff', 'driver'), markAsRead);
 
 // PUT mark as unread
 router.put('/:id/unread', markAsUnread);
 
-// DELETE archive message
-router.delete('/:id', deleteMessage);
+// PATCH archive message (soft archive)
+router.patch('/:id/archive', deleteMessage);
+
+// PATCH unarchive message (restore to inbox)
+router.patch('/:id/unarchive', unarchiveMessage);
+
+// DELETE archive message (deprecated - use PATCH /archive instead)
+// Keep DELETE admin-only to prevent misuse
+router.delete('/:id', requireRole('admin'), deleteMessage);
 
 module.exports = router;

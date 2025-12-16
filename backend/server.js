@@ -74,7 +74,56 @@ async function start() {
       logger.warn('DB connection failed (continuing startup):', err.message);
     }
 
-    const server = app.listen(config.PORT, () => {
+    // Create HTTP server and attach Socket.IO
+    const http = require('http');
+    const { Server } = require('socket.io');
+    const jwt = require('jsonwebtoken');
+
+    const server = http.createServer(app);
+
+    const io = new Server(server, {
+      cors: {
+        origin: config.FRONTEND_URL === '*' ? true : config.FRONTEND_URL,
+        methods: ['GET', 'POST']
+      }
+    });
+
+    // Expose simple helper to emit notifications to specific user rooms
+    app.set('socketHelpers', {
+      emitNotification: (userId, payload) => {
+        try {
+          io.to(userId.toString()).emit('notification', payload);
+        } catch (e) {
+          logger.warn('Failed to emit notification', e.message);
+        }
+      }
+    });
+
+    io.on('connection', (socket) => {
+      try {
+        const token = socket.handshake.auth?.token;
+        if (token) {
+          try {
+            const decoded = jwt.verify(token, config.JWT_SECRET);
+            const uid = decoded.id || decoded._id;
+            if (uid) {
+              socket.join(uid.toString());
+              console.log('[SOCKET] User joined room:', uid.toString());
+            }
+          } catch (e) {
+            console.log('[SOCKET] Token verify failed for socket connection:', e.message);
+          }
+        }
+
+        socket.on('disconnect', (reason) => {
+          console.log('[SOCKET] Disconnected:', socket.id, reason);
+        });
+      } catch (err) {
+        console.error('[SOCKET] Connection handler error:', err);
+      }
+    });
+
+    server.listen(config.PORT, () => {
       logger.info(`Server listening on port ${config.PORT}`);
     });
 

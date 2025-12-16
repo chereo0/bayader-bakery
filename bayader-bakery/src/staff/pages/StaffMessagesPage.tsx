@@ -35,10 +35,11 @@ const StaffMessagesPage: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [isReplying, setIsReplying] = useState(false)
+  const [activeTab, setActiveTab] = useState<'inbox' | 'archived'>('inbox')
 
   useEffect(() => {
     fetchAdminAndMessages()
-  }, [page])
+  }, [page, activeTab])
 
   const fetchAdminAndMessages = async () => {
     try {
@@ -65,7 +66,7 @@ const StaffMessagesPage: React.FC = () => {
 
       // Fetch ALL messages (both received FROM admin and sent TO admin)
       const messagesResponse = await axios.get(
-        `${API_BASE_URL}/messages/conversations/all?page=${page}&limit=50`,
+        `${API_BASE_URL}/messages/conversations/all?page=${page}&limit=50&archived=${activeTab === 'archived' ? 'true' : 'false'}`,
         {
           headers: { 'Authorization': `Bearer ${getToken()}` }
         }
@@ -166,8 +167,9 @@ const StaffMessagesPage: React.FC = () => {
 
   const handleArchiveMessage = async (messageId: string) => {
     try {
-      await axios.delete(
-        `${API_BASE_URL}/messages/${messageId}`,
+      await axios.patch(
+        `${API_BASE_URL}/messages/${messageId}/archive`,
+        {},
         {
           headers: { 'Authorization': `Bearer ${getToken()}` }
         }
@@ -177,6 +179,23 @@ const StaffMessagesPage: React.FC = () => {
       await fetchAdminAndMessages()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to archive message')
+    }
+  }
+
+  const handleUnarchiveMessage = async (messageId: string) => {
+    try {
+      await axios.patch(
+        `${API_BASE_URL}/messages/${messageId}/unarchive`,
+        {},
+        {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        }
+      )
+      setSelectedMessage(null)
+      setIsReplying(false)
+      await fetchAdminAndMessages()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unarchive message')
     }
   }
 
@@ -207,6 +226,30 @@ const StaffMessagesPage: React.FC = () => {
           <h2 className="text-lg font-semibold text-[#5E372E]">Messages</h2>
         </div>
 
+        {/* Tabs: Inbox / Archived */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => { setActiveTab('inbox'); setPage(1); setSelectedMessage(null); }}
+            className={`px-3 py-1 rounded-lg text-sm border transition-colors ${
+              activeTab === 'inbox'
+                ? 'bg-[#c79a63] text-white border-[#c79a63]'
+                : 'bg-white text-[#5E372E] border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Inbox
+          </button>
+          <button
+            onClick={() => { setActiveTab('archived'); setPage(1); setSelectedMessage(null); }}
+            className={`px-3 py-1 rounded-lg text-sm border transition-colors ${
+              activeTab === 'archived'
+                ? 'bg-[#c79a63] text-white border-[#c79a63]'
+                : 'bg-white text-[#5E372E] border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            Archived
+          </button>
+        </div>
+
         <button
           onClick={() => {
             setShowCompose(true)
@@ -226,7 +269,9 @@ const StaffMessagesPage: React.FC = () => {
         ) : (
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
             {messages.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">No messages</p>
+              <p className="text-center text-gray-500 py-4">
+                {activeTab === 'archived' ? 'No archived messages' : 'No messages'}
+              </p>
             ) : (
               messages.map((message) => (
                 <div
@@ -286,12 +331,21 @@ const StaffMessagesPage: React.FC = () => {
               >
                 Reply
               </button>
-              <button 
-                onClick={() => handleArchiveMessage(selectedMessage._id)}
-                className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
-              >
-                Archive
-              </button>
+              {activeTab === 'archived' ? (
+                <button
+                  onClick={() => handleUnarchiveMessage(selectedMessage._id)}
+                  className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors"
+                >
+                  Restore
+                </button>
+              ) : (
+                <button 
+                  onClick={() => handleArchiveMessage(selectedMessage._id)}
+                  className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  Archive
+                </button>
+              )}
             </div>
           </div>
         ) : (

@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Material = require('../models/Material');
 const User = require('../models/User');
@@ -679,6 +680,75 @@ const getDriverOrders = async (req, res, next) => {
   }
 };
 
+// Driver: get today's stats for driver dashboard
+const getDriverTodayStats = async (req, res, next) => {
+  try {
+    const driverId = req.user?.id || req.user?._id;
+    if (!driverId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    // Compute start and end of today (server local timezone)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Total orders assigned to this driver today (created today)
+    const todayTotal = await Order.countDocuments({
+      assignedDriver: driverId,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    // Completed (delivered) today based on actualDeliveryDate
+    const todayDelivered = await Order.countDocuments({
+      assignedDriver: driverId,
+      deliveryStatus: 'delivered',
+      actualDeliveryDate: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    // Active orders (assigned/in-transit) created today
+    const todayActive = await Order.countDocuments({
+      assignedDriver: driverId,
+      deliveryStatus: { $in: ['assigned', 'in-transit'] },
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    // Pending today (pending delivery) created today
+    const todayPending = await Order.countDocuments({
+      assignedDriver: driverId,
+      deliveryStatus: 'pending',
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    // Earnings for deliveries completed today
+    const earningsAgg = await Order.aggregate([
+      { $match: {
+        assignedDriver: new mongoose.Types.ObjectId(driverId),
+        deliveryStatus: 'delivered',
+        actualDeliveryDate: { $gte: startOfDay, $lte: endOfDay }
+      } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+
+    const earningsToday = (earningsAgg[0] && earningsAgg[0].total) ? earningsAgg[0].total : 0;
+
+    // Compose response matching frontend expectations
+    const data = {
+      completedToday: todayDelivered,
+      earningsToday,
+      activeOrders: todayActive,
+      todayTotal,
+      todayPending
+    };
+
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('Error fetching driver today stats', error);
+    next(error);
+  }
+};
+
 // Driver: Update delivery status for an order
 const updateDeliveryStatus = async (req, res, next) => {
   try {
@@ -829,6 +899,7 @@ module.exports = {
   getStaffOrders,
   getStaffOrderStats,
   getDriverOrders,
+  getDriverTodayStats,
   updateDeliveryStatus,
   assignOrderToDriver,
 };

@@ -26,7 +26,10 @@ const auth = (req, res, next) => {
     const decoded = jwt.verify(token, config.JWT_SECRET);
 
     // Attach user info to request
-    req.user = decoded;
+    // Normalize token payload so both `id` and `_id` are available
+    req.user = decoded || {};
+    if (decoded && decoded.id && !decoded._id) req.user._id = decoded.id;
+    if (decoded && decoded._id && !decoded.id) req.user.id = decoded._id;
 
     // Debug logging in development to help trace auth issues
     if (config.NODE_ENV === 'development') {

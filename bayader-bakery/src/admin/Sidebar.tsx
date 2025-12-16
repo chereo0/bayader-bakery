@@ -103,7 +103,7 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
         return
       }
 
-      const response = await fetch('/api/notifications/me', {
+      const response = await fetch('/api/notifications/unread-count', {
         headers: { Authorization: `Bearer ${token}` }
       })
       
@@ -111,9 +111,8 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
       
       if (response.ok) {
         const data = await response.json()
-        console.log('[ADMIN-SIDEBAR] 🔔 Notifications data:', data.data.length, 'total')
-        const unread = data.data.filter((n: any) => !n.read).length
-        console.log('[ADMIN-SIDEBAR] 🔔 Unread count:', unread)
+        const unread = data?.data?.unreadCount ?? 0
+        console.log('[ADMIN-SIDEBAR] 🔔 Unread count (server):', unread)
         setUnreadCount(unread)
       } else {
         console.log('[ADMIN-SIDEBAR] ❌ Response not ok:', await response.text())
@@ -122,6 +121,13 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
       console.error('[ADMIN-SIDEBAR] ❌ Failed to fetch notifications:', error)
     }
   }
+
+  // Listen for global notifications updates to immediately refresh badge
+  useEffect(() => {
+    const handler = () => fetchUnreadCount()
+    window.addEventListener('notifications-updated', handler)
+    return () => window.removeEventListener('notifications-updated', handler)
+  }, [])
 
   const renderIcon = (key: string) => {
     switch (key) {

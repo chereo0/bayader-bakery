@@ -176,7 +176,7 @@ const AdminEventEditPage: React.FC = () => {
       if (response.data.success) {
         addToast('Event updated successfully', 'success')
         setTimeout(() => {
-          navigate('/admin/events')
+          navigate('/admin')
         }, 1000)
       }
     } catch (err: any) {
@@ -204,22 +204,32 @@ const AdminEventEditPage: React.FC = () => {
           {error}
         </div>
         <button
-          onClick={() => navigate('/admin/events')}
+          onClick={() => navigate('/admin')}
           className="mt-4 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          ← Back to Events
+          ← Back to Admin
         </button>
       </div>
     )
   }
 
   return (
-    <div className="max-w-2xl">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-[#5E372E]">Edit Event</h1>
-        <p className="text-gray-600 mt-2">Update event details and pricing</p>
-      </div>
+    <div className="min-h-screen bg-[#F5F1E8] py-8">
+      <div className="max-w-2xl mx-auto px-4">
+        {/* Header with Back Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/admin')}
+            className="mb-4 flex items-center text-gray-600 hover:text-[#5E372E] transition-colors"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Admin Dashboard
+          </button>
+          <h1 className="text-3xl font-bold text-[#5E372E]">Edit Event</h1>
+          <p className="text-gray-600 mt-2">Update event details and pricing</p>
+        </div>
 
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 space-y-2 z-50">
@@ -383,7 +393,7 @@ const AdminEventEditPage: React.FC = () => {
         <div className="flex gap-3 pt-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={() => navigate('/admin/events')}
+            onClick={() => navigate('/admin')}
             className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             disabled={loading}
           >
@@ -398,6 +408,7 @@ const AdminEventEditPage: React.FC = () => {
           </button>
         </div>
       </form>
+      </div>
     </div>
   )
 }

@@ -106,9 +106,9 @@ router.get("/me", auth, async (req, res) => {
 
 /**
  * GET /api/event-bookings
- * Get all event bookings (admin only)
+ * Get all event bookings (admin and staff)
  */
-router.get("/", auth, requireRole("admin"), async (req, res) => {
+router.get("/", auth, requireRole(["admin", "staff"]), async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
 
@@ -146,12 +146,20 @@ router.get("/", auth, requireRole("admin"), async (req, res) => {
 });
 
 /**
- * PATCH /api/event-bookings/:id
- * Update event booking status (admin only)
+ * PATCH /api/event-bookings/:id/status
+ * Update event booking status (admin and staff can approve/reject)
  */
-router.patch("/:id", auth, requireRole("admin"), async (req, res) => {
+router.patch("/:id/status", auth, requireRole(["admin", "staff"]), async (req, res) => {
   try {
-    const { status, notes } = req.body;
+    const { status } = req.body;
+
+    // Validate status
+    if (!status || !["approved", "rejected"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be 'approved' or 'rejected'",
+      });
+    }
 
     const booking = await EventBooking.findById(req.params.id);
     if (!booking) {
@@ -161,14 +169,18 @@ router.patch("/:id", auth, requireRole("admin"), async (req, res) => {
       });
     }
 
-    const oldStatus = booking.status;
+    // Only allow transition from pending
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot change status from ${booking.status}. Only pending bookings can be approved or rejected.`,
+      });
+    }
 
-    if (status) {
-      booking.status = status;
-    }
-    if (notes) {
-      booking.notes = notes;
-    }
+    // Update status with audit trail
+    booking.status = status;
+    booking.statusChangedAt = new Date();
+    booking.statusChangedBy = req.user.id;
 
     await booking.save();
 
@@ -176,23 +188,109 @@ router.patch("/:id", auth, requireRole("admin"), async (req, res) => {
     try {
       const Notification = require("../models/Notification");
       const statusMessages = {
-        accepted: "Your event booking has been accepted!",
+        approved: "Your event booking has been approved!",
         rejected: "Your event booking has been rejected.",
-        pending: "Your event booking is being reviewed.",
       };
 
       await Notification.create({
         userId: booking.customerId,
         title: "Event Booking Update",
-        message:
-          statusMessages[status] ||
-          `Your booking status has been updated to ${status}`,
+        message: statusMessages[status],
         type: "booking",
         relatedId: booking._id,
       });
     } catch (notifError) {
       console.error("Error creating notification:", notifError);
     }
+
+    res.json({
+      success: true,
+      message: `Booking ${status} successfully`,
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error updating booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update booking",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * PATCH /api/event-bookings/:id/cancel
+ * Cancel event booking (customer can cancel their own pending bookings)
+ */
+router.patch("/:id/cancel", auth, async (req, res) => {
+  try {
+    const booking = await EventBooking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // Check authorization - user must own the booking
+    if (booking.customerId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized. You can only cancel your own bookings.",
+      });
+    }
+
+    // Can only cancel pending bookings
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel ${booking.status} booking. Only pending bookings can be cancelled.`,
+      });
+    }
+
+    // Update status with audit trail
+    booking.status = "cancelled";
+    booking.statusChangedAt = new Date();
+    booking.statusChangedBy = req.user.id;
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: "Booking cancelled successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error cancelling booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel booking",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * PATCH /api/event-bookings/:id
+ * Update event booking notes (admin only)
+ */
+router.patch("/:id", auth, requireRole("admin"), async (req, res) => {
+  try {
+    const { notes } = req.body;
+
+    const booking = await EventBooking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    if (notes !== undefined) {
+      booking.notes = notes;
+    }
+
+    await booking.save();
 
     res.json({
       success: true,

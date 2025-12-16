@@ -25,8 +25,8 @@ router.get('/my', auth, getMyOrders);
 // Driver: get my assigned orders
 router.get('/driver/my-orders', auth, requireRole('driver'), getDriverOrders);
 
-// Driver: get today's stats (TODO: implement getDriverTodayStats in orderController)
-// router.get('/driver/stats/today', auth, requireRole('driver'), getDriverTodayStats);
+// Driver: get today's stats
+router.get('/driver/stats/today', auth, requireRole('driver'), require('../controllers/orderController').getDriverTodayStats);
 
 // Get order by id (owner or admin/staff/driver)
 router.get('/:id', auth, getOrderById);

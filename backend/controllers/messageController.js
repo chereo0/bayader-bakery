@@ -47,11 +47,12 @@ const getConversations = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const archived = req.query.archived === 'true';
     // Show all messages where user is sender OR receiver
     const filter = {
       $or: [
-        { to: req.user.id, isArchived: false },
-        { from: req.user.id, isArchived: false }
+        { to: req.user.id, isArchived: archived },
+        { from: req.user.id, isArchived: archived }
       ]
     };
 
@@ -223,7 +224,7 @@ const markAsUnread = async (req, res) => {
   }
 };
 
-// DELETE /api/messages/:id - Archive/delete message
+// DELETE /api/messages/:id - Archive message (soft delete)
 const deleteMessage = async (req, res) => {
   try {
     const message = await Message.findById(req.params.id);
@@ -232,15 +233,40 @@ const deleteMessage = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
 
-    // Check if user is sender or recipient
+    // Check if user is sender or recipient (both can archive)
     if (message.to.toString() !== req.user.id && message.from.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
     message.isArchived = true;
+    message.archivedAt = new Date();
     await message.save();
 
     res.json({ success: true, message: 'Message archived' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// PATCH /api/messages/:id/unarchive - Unarchive message (restore to inbox)
+const unarchiveMessage = async (req, res) => {
+  try {
+    const message = await Message.findById(req.params.id);
+
+    if (!message) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    // Check if user is sender or recipient (both can unarchive)
+    if (message.to.toString() !== req.user.id && message.from.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    message.isArchived = false;
+    message.archivedAt = null;
+    await message.save();
+
+    res.json({ success: true, data: message, message: 'Message restored to inbox' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -269,5 +295,6 @@ module.exports = {
   markAsRead,
   markAsUnread,
   deleteMessage,
+  unarchiveMessage,
   getUnreadCount
 };

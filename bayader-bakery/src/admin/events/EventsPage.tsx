@@ -51,13 +51,15 @@ const EventsPage: React.FC = () => {
   }, [token])
 
   const filtered = useMemo(() => {
+    // Defensive check to prevent white screen if events becomes undefined
+    if (!Array.isArray(events)) return []
     if (!search) return events
     const q = search.toLowerCase()
     return events.filter(e => 
-      e.title.toLowerCase().includes(q) ||
-      e.name.toLowerCase().includes(q) ||
+      e.title?.toLowerCase().includes(q) ||
+      e.name?.toLowerCase().includes(q) ||
       e.venue?.toLowerCase().includes(q) ||
-      e.date.includes(q)
+      e.date?.includes(q)
     )
   }, [events, search])
 
@@ -146,7 +148,7 @@ const EventsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F6F2] py-8" style={{ backgroundImage: "url('/images/polka.png')", backgroundRepeat: 'repeat' }}>
+    <div className="min-h-screen bg-[#F9F6F2] py-8 bg-[url('/images/polka.png')] bg-repeat">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-display text-[#5E372E]">Events Management</h2>

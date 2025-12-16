@@ -16,7 +16,6 @@ interface SettingsState {
   };
   preferences: {
     theme: string;
-    timezone: string;
   };
 }
 
@@ -34,8 +33,7 @@ const StaffSettingsPage: React.FC = () => {
       sms: false
     },
     preferences: {
-      theme: 'light',
-      timezone: 'UTC+3'
+      theme: 'light'
     }
   });
 
@@ -359,19 +357,6 @@ const StaffSettingsPage: React.FC = () => {
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-            <select
-              title="Timezone"
-              value={settings.preferences.timezone}
-              onChange={e => updateSetting('preferences', 'timezone', e.target.value)}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option value="UTC+3">UTC+3 (Riyadh)</option>
-              <option value="UTC+0">UTC+0 (London)</option>
-              <option value="UTC-5">UTC-5 (New York)</option>
             </select>
           </div>
         </div>

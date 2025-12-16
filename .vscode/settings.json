@@ -1,3 +1,4 @@
 {
-    "liveServer.settings.multiRootWorkspaceName": "bayader-bakery"
+    "liveServer.settings.multiRootWorkspaceName": "bayader-bakery",
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

@@ -140,6 +140,8 @@ const AdminNotificationsPage: React.FC = () => {
       console.log('[FRONTEND-MARK-ALL] ✅ Response data:', data);
 
       setNotifications(notifications.map((n) => ({ ...n, read: true })));
+      // Immediately refresh unread badge
+      window.dispatchEvent(new Event('notifications-updated'))
       setToast({ type: "success", message: "All marked as read" });
     } catch (err) {
       console.log('[FRONTEND-MARK-ALL] ❌ Error:', err);

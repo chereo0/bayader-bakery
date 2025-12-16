@@ -8,13 +8,15 @@ const MessagesPage: React.FC = () => {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [composingReply, setComposingReply] = useState(false)
   const [replyText, setReplyText] = useState('')
+  const [activeTab, setActiveTab] = useState<'inbox' | 'archived'>('inbox')
 
-  // Fetch messages on component mount
+  // Fetch messages on component mount or tab change
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         setLoading(true)
-        const data = await messageService.getMessages()
+        const archived = activeTab === 'archived'
+        const data = await messageService.getMessages(archived)
         // Filter to show only staff messages (admin and staff roles)
         const staffMessages = data.filter(m => m.from?.role === 'admin' || m.from?.role === 'staff' || m.type === 'admin')
         setMessages(staffMessages)
@@ -76,7 +78,7 @@ const MessagesPage: React.FC = () => {
     }
 
     fetchMessages()
-  }, [])
+  }, [activeTab])
 
   const unreadCount = messages.filter(m => !m.read).length
 
@@ -112,6 +114,32 @@ const MessagesPage: React.FC = () => {
     }
   }
 
+  const handleArchive = async (messageId: string) => {
+    try {
+      await messageService.archiveMessage(messageId)
+      setMessages(prev => prev.filter(m => m._id !== messageId))
+      if (selectedMessage?._id === messageId) {
+        setSelectedMessage(null)
+      }
+    } catch (err) {
+      console.error('Error archiving message:', err)
+      alert('Failed to archive message')
+    }
+  }
+
+  const handleUnarchive = async (messageId: string) => {
+    try {
+      await messageService.unarchiveMessage(messageId)
+      setMessages(prev => prev.filter(m => m._id !== messageId))
+      if (selectedMessage?._id === messageId) {
+        setSelectedMessage(null)
+      }
+    } catch (err) {
+      console.error('Error unarchiving message:', err)
+      alert('Failed to unarchive message')
+    }
+  }
+
   const getMessageTypeColor = (type: string) => {
     switch (type) {
       case 'system':
@@ -135,11 +163,35 @@ const MessagesPage: React.FC = () => {
 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-semibold text-[#5E372E]">Messages</h2>
-        {unreadCount > 0 && (
+        {unreadCount > 0 && activeTab === 'inbox' && (
           <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
             {unreadCount} unread
           </span>
         )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          onClick={() => setActiveTab('inbox')}
+          className={`py-2 px-6 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'inbox'
+              ? 'border-[#c79a63] text-[#5E372E]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Inbox
+        </button>
+        <button
+          onClick={() => setActiveTab('archived')}
+          className={`py-2 px-6 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'archived'
+              ? 'border-[#c79a63] text-[#5E372E]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Archived
+        </button>
       </div>
 
       {loading && (
@@ -249,9 +301,21 @@ const MessagesPage: React.FC = () => {
                     >
                       Reply
                     </button>
-                    <button className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors">
-                      Forward
-                    </button>
+                    {activeTab === 'inbox' ? (
+                      <button
+                        onClick={() => handleArchive(selectedMessage._id)}
+                        className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors"
+                      >
+                        Archive
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleUnarchive(selectedMessage._id)}
+                        className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors"
+                      >
+                        Unarchive
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

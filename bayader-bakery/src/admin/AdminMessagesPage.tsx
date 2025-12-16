@@ -46,6 +46,7 @@ const AdminMessagesPage: React.FC = () => {
   const [success, setSuccess] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
   const [roleFilter, setRoleFilter] = useState<'all' | 'staff' | 'driver' | 'customer'>('all')
+  const [activeTab, setActiveTab] = useState<'inbox' | 'archived'>('inbox')
 
   const token = localStorage.getItem('token');
 
@@ -56,16 +57,19 @@ const AdminMessagesPage: React.FC = () => {
     // Auto-refresh every 10 seconds
     const interval = setInterval(fetchMessages, 10000);
     return () => clearInterval(interval);
-  }, [roleFilter]);
+  }, [roleFilter, activeTab]);
 
   const fetchMessages = async () => {
     try {
       if (!token) return;
 
       let url = `${API_BASE_URL}/messages/conversations/all`;
+      const params = new URLSearchParams();
       if (roleFilter !== 'all') {
-        url += `?fromRole=${roleFilter}`;
+        params.append('fromRole', roleFilter);
       }
+      params.append('archived', activeTab === 'archived' ? 'true' : 'false');
+      url += `?${params.toString()}`;
 
       const response = await fetch(url, {
         headers: {
@@ -214,24 +218,45 @@ const AdminMessagesPage: React.FC = () => {
     }
   };
 
-  const deleteMessage = async (messageId: string) => {
+  const archiveMessage = async (messageId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/messages/${messageId}`, {
-        method: 'DELETE',
+      const response = await fetch(`${API_BASE_URL}/messages/${messageId}/archive`, {
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (!response.ok) throw new Error('Failed to delete message');
+      if (!response.ok) throw new Error('Failed to archive message');
 
       setSuccess('Message archived');
       setSelectedMessage(null);
       fetchMessages();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete message');
+      setError(err instanceof Error ? err.message : 'Failed to archive message');
+    }
+  };
+
+  const unarchiveMessage = async (messageId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/messages/${messageId}/unarchive`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to unarchive message');
+
+      setSuccess('Message restored to inbox');
+      setSelectedMessage(null);
+      fetchMessages();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unarchive message');
     }
   };
 
@@ -258,12 +283,36 @@ const AdminMessagesPage: React.FC = () => {
         {/* Messages List */}
         <div className="lg:col-span-1 bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[#5E372E]">Inbox</h2>
+            <h2 className="text-lg font-semibold text-[#5E372E]">Messages</h2>
             {unreadCount > 0 && (
               <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                 {unreadCount}
               </span>
             )}
+          </div>
+
+          {/* Inbox/Archived Tabs */}
+          <div className="flex gap-2 mb-4 border-b">
+            <button
+              onClick={() => setActiveTab('inbox')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'inbox'
+                  ? 'text-[#5E372E] border-b-2 border-[#c79a63]'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Inbox
+            </button>
+            <button
+              onClick={() => setActiveTab('archived')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'archived'
+                  ? 'text-[#5E372E] border-b-2 border-[#c79a63]'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Archived
+            </button>
           </div>
 
           {/* Role Filter Tabs */}
@@ -400,12 +449,21 @@ const AdminMessagesPage: React.FC = () => {
                 >
                   Reply
                 </button>
-                <button 
-                  onClick={() => deleteMessage(selectedMessage._id)}
-                  className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50 transition-colors"
-                >
-                  Archive
-                </button>
+                {activeTab === 'inbox' ? (
+                  <button 
+                    onClick={() => archiveMessage(selectedMessage._id)}
+                    className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50 transition-colors"
+                  >
+                    Archive
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => unarchiveMessage(selectedMessage._id)}
+                    className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors"
+                  >
+                    Restore to Inbox
+                  </button>
+                )}
               </div>
             </div>
           ) : (

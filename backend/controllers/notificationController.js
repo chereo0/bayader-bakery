@@ -21,7 +21,7 @@ exports.getNotifications = async (req, res) => {
       });
     }
 
-    const userId = req.user._id || req.user.id;
+    const userId = req.user?.id || req.user?._id;
     const { page = 1, limit = 10, read = false, type } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -42,6 +42,7 @@ exports.getNotifications = async (req, res) => {
       .lean();
 
     const total = await Notification.countDocuments(filter);
+    const unreadCount = await Notification.countDocuments({ recipient: userId, read: false });
 
     console.log('[NOTIFICATIONS] ✅ Notifications fetched:', { userId, count: notifications.length, total });
 
@@ -54,7 +55,8 @@ exports.getNotifications = async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         pages: Math.ceil(total / parseInt(limit))
-      }
+      },
+      unreadCount: unreadCount || 0
     });
   } catch (error) {
     console.log('[NOTIFICATIONS] ❌ Error fetching notifications:', error.message);
@@ -147,17 +149,24 @@ exports.markAsRead = async (req, res) => {
 // Mark all notifications as read
 exports.markAllAsRead = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
+    console.log('[INFO] Mark all read userId:', userId);
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'User id not found in token' });
+    }
+
     const result = await Notification.updateMany(
-      { recipient: req.user._id, read: false },
-      { read: true, readAt: new Date() }
+      { recipient: userId, read: false },
+      { $set: { read: true, readAt: new Date() } }
     );
 
-    logger.info(`All notifications marked as read for user ${req.user._id}`, result);
+    logger.info(`All notifications marked as read for user ${userId}`, result);
 
     res.json({
       success: true,
       message: 'All notifications marked as read',
-      data: { modifiedCount: result.modifiedCount }
+      data: { modifiedCount: result.modifiedCount, unreadCount: 0 }
     });
   } catch (error) {
     logger.error('Error marking all notifications as read', error);

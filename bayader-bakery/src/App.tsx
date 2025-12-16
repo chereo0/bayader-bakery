@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -52,7 +52,7 @@ export default function App(){
               <DriverDashboard />
             </ProtectedRoute>
           } />
-          <Route path="/staff" element={
+          <Route path="/staff/*" element={
             <ProtectedRoute requiredRoles={['staff']}>
               <StaffLayout />
             </ProtectedRoute>
@@ -67,6 +67,7 @@ export default function App(){
               <AdminDashboard />
             </ProtectedRoute>
           } />
+          <Route path="/admin/events" element={<Navigate to="/admin" replace />} />
           <Route path="/admin/events/create" element={
             <ProtectedRoute adminOnly>
               <AdminEventCreatePage />
