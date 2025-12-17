@@ -269,28 +269,34 @@ const getLowStockProducts = async (req, res) => {
 // @desc    Upload product image (Cloudinary)
 // @route   POST /api/products/upload
 // @access  Private/Admin
+// @desc    Upload product image (Cloudinary or Local)
+// @route   POST /api/products/upload
+// @access  Private/Admin
 const uploadImage = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
-  // Cloudinary automatically uploads and returns the URL
-  const fileUrl = req.file.path; // Cloudinary URL
-  const publicId = req.file.filename; // Cloudinary public ID
+  let fileUrl = req.file.path;
+  let publicId = req.file.filename;
 
-  console.log('✅ [UPLOAD] File uploaded to Cloudinary:');
-  console.log('   URL:', fileUrl);
-  console.log('   Public ID:', publicId);
-  console.log('   Full file object keys:', Object.keys(req.file));
+  console.log('✅ [UPLOAD] File uploaded:', {
+    path: fileUrl,
+    filename: publicId,
+    mimetype: req.file.mimetype
+  });
 
-  // Validate URL format
-  if (!fileUrl || (!fileUrl.startsWith('http://') && !fileUrl.startsWith('https://'))) {
-    console.error('❌ [UPLOAD] Invalid URL format:', fileUrl);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Invalid Cloudinary URL',
-      debug: { fileUrl, publicId }
-    });
+  // Check if it's a local upload (path won't start with http)
+  if (!fileUrl.startsWith('http')) {
+    // Construct local URL
+    // req.file.path will be something like 'uploads\filename.png' on Windows
+    // We need to convert it to a web-accessible URL: serverUrl + '/uploads/' + filename
+    
+    // Normalize path separators for URL
+    const filename = req.file.filename;
+    fileUrl = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+    
+    console.log('📝 [UPLOAD] Converted to local URL:', fileUrl);
   }
 
   res.status(201).json({ 
@@ -298,7 +304,7 @@ const uploadImage = async (req, res) => {
     data: { 
       url: fileUrl,
       filename: publicId,
-      publicId // Can be used later to delete the image
+      publicId 
     } 
   });
 };

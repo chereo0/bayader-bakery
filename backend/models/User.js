@@ -60,7 +60,7 @@ const userSchema = new mongoose.Schema({
     country: {
       type: String,
       required: true,
-      default: 'Saudi Arabia',
+      default: 'Lebanon',
       trim: true
     },
     phone: {
@@ -91,7 +91,7 @@ const userSchema = new mongoose.Schema({
     preferences: {
       language: { type: String, default: 'en', enum: ['en', 'ar'] },
       theme: { type: String, default: 'light', enum: ['light', 'dark'] },
-      timezone: { type: String, default: 'UTC+3' }
+      
     }
   },
   cart: {

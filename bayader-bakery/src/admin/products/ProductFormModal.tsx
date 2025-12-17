@@ -48,28 +48,28 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
 
   const handleFile = async (file?: File) => {
     if (!file) return
-    
+
     // Validate file
     if (!file.type.startsWith('image/')) {
       show && show('Please select an image file')
       return
     }
-    
+
     if (file.size > 5 * 1024 * 1024) {
       show && show('Image size must be less than 5MB')
       return
     }
-    
+
     setUploading(true)
     show && show('Uploading image...')
-    
+
     try {
       const fd = new FormData()
       fd.append('image', file)
-      
+
       console.log('📤 Uploading to:', `${API_URL}/products/upload`)
       console.log('📤 File:', file.name, file.type, file.size)
-      
+
       const res = await fetch(`${API_URL}/products/upload`, {
         method: 'POST',
         headers: {
@@ -77,7 +77,7 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
         },
         body: fd,
       })
-      
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         console.error('❌ Upload error:', err)
@@ -85,19 +85,19 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
         setUploading(false)
         return
       }
-      
+
       const data = await res.json().catch(() => null)
       console.log('✅ Upload response:', data)
-      
+
       const url = data?.data?.url
-      
+
       if (!url) {
         console.error('❌ No URL in response:', data)
         show && show('Upload succeeded but no URL returned')
         setUploading(false)
         return
       }
-      
+
       // Validate URL format
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         console.error('❌ Invalid URL format:', url)
@@ -105,11 +105,11 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
         setUploading(false)
         return
       }
-      
+
       console.log('✅ Setting image URL:', url)
       setForm(f => ({ ...f, image: url }))
       show && show('✅ Image uploaded successfully')
-      
+
     } catch (err) {
       console.error('❌ Upload exception:', err)
       show && show('Upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
@@ -126,35 +126,43 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium">Name</label>
-            <input required title="Product Name" placeholder="Enter product name" value={form.name} onChange={e=>handleChange('name', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
+            <input required title="Product Name" placeholder="Enter product name" value={form.name} onChange={e => handleChange('name', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
           </div>
 
           <div>
             <label className="text-sm font-medium">Category</label>
-            <select required title="Product Category" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]">
-              <option value="">Select Category</option>
-              <option value="Cakes">Cakes</option>
-              <option value="Pastries">Pastries</option>
-              <option value="Breads">Breads</option>
-              <option value="Cookies">Cookies</option>
-              <option value="Custom Orders">Custom Orders</option>
-              <option value="Seasonal">Seasonal</option>
-            </select>
+            <input
+              required
+              list="category-options"
+              title="Product Category"
+              placeholder="Select or type a category"
+              value={form.category}
+              onChange={e => handleChange('category', e.target.value)}
+              className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
+            />
+            <datalist id="category-options">
+              <option value="Cakes" />
+              <option value="Pastries" />
+              <option value="Breads" />
+              <option value="Cookies" />
+              <option value="Custom Orders" />
+              <option value="Seasonal" />
+            </datalist>
           </div>
 
           <div>
             <label className="text-sm font-medium">Stock</label>
-            <input required type="number" min="0" title="Stock Quantity" placeholder="0" value={form.stock ?? 0} onChange={e=>handleChange('stock', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
+            <input required type="number" min="0" title="Stock Quantity" placeholder="0" value={form.stock ?? 0} onChange={e => handleChange('stock', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
           </div>
 
           <div>
             <label className="text-sm font-medium">Price ($)</label>
-            <input required type="number" min="0" step="0.01" title="Product Price" placeholder="0.00" value={form.price} onChange={e=>handleChange('price', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
+            <input required type="number" min="0" step="0.01" title="Product Price" placeholder="0.00" value={form.price} onChange={e => handleChange('price', e.target.value)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" />
           </div>
 
           <div>
             <label className="text-sm font-medium">Status</label>
-            <select title="Product Status" value={form.status ?? 'Active'} onChange={e=>handleChange('status', e.target.value as any)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]">
+            <select title="Product Status" value={form.status ?? 'Active'} onChange={e => handleChange('status', e.target.value as any)} className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]">
               <option value="Active">Active</option>
               <option value="Out of Stock">Out of Stock</option>
               <option value="Draft">Draft</option>
@@ -163,15 +171,15 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
 
           <div className="md:col-span-2">
             <label className="text-sm font-medium block mb-2">Product Image</label>
-            
+
             {/* Current Image Preview */}
             {form.image && (
               <div className="mb-3">
                 <p className="text-xs text-gray-600 mb-1">Current Image:</p>
                 <div className="flex items-center gap-3">
-                  <img 
-                    src={form.image} 
-                    alt="Product preview" 
+                  <img
+                    src={form.image}
+                    alt="Product preview"
                     className="w-24 h-24 object-cover rounded border"
                     onError={(e) => {
                       e.currentTarget.src = '/images/placeholder.jpg'
@@ -192,27 +200,27 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
             <div className="space-y-2">
               <div>
                 <label className="text-xs font-medium text-gray-700">Upload New Image</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  title="Upload Product Image" 
-                  onChange={e=>handleFile(e.target.files?.[0])} 
-                  className="w-full text-sm border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" 
+                <input
+                  type="file"
+                  accept="image/*"
+                  title="Upload Product Image"
+                  onChange={e => handleFile(e.target.files?.[0])}
+                  className="w-full text-sm border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
                   disabled={uploading}
                 />
               </div>
-              
+
               <div>
                 <label className="text-xs font-medium text-gray-700">Or Paste Image URL</label>
-                <input 
-                  value={form.image ?? ''} 
-                  onChange={e=>handleChange('image', e.target.value)} 
-                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" 
-                  placeholder="https://res.cloudinary.com/..." 
+                <input
+                  value={form.image ?? ''}
+                  onChange={e => handleChange('image', e.target.value)}
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
+                  placeholder="https://res.cloudinary.com/..."
                   disabled={uploading}
                 />
               </div>
-              
+
               {uploading && (
                 <div className="text-sm text-blue-600 flex items-center gap-2">
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -227,10 +235,10 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
 
           <div className="md:col-span-2">
             <label className="text-sm font-medium">Description</label>
-            <textarea 
-              value={form.description ?? ''} 
-              onChange={e=>handleChange('description', e.target.value)} 
-              className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]" 
+            <textarea
+              value={form.description ?? ''}
+              onChange={e => handleChange('description', e.target.value)}
+              className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6b3f2f]"
               rows={2}
               placeholder="Product description"
             />
@@ -238,10 +246,10 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
 
           <div className="md:col-span-2">
             <label className="text-sm font-medium block mb-2">Ingredients (Optional, comma-separated)</label>
-            <input 
+            <input
               type="text"
-              value={Array.isArray(form.ingredients) ? form.ingredients.join(', ') : ''} 
-              onChange={e=>{
+              value={Array.isArray(form.ingredients) ? form.ingredients.join(', ') : ''}
+              onChange={e => {
                 const val = e.target.value;
                 const arr = val ? val.split(',').map(s => s.trim()).filter(Boolean) : [];
                 handleChange('ingredients', arr);
@@ -253,8 +261,8 @@ const ProductFormModal: React.FC<Props> = ({ open, product, onSave, onClose }) =
           </div>
 
           <div className="md:col-span-2">
-            <RecipeManager 
-              recipe={form.recipe || []} 
+            <RecipeManager
+              recipe={form.recipe || []}
               onChange={(recipe: RecipeItem[]) => handleChange('recipe', recipe)}
             />
           </div>

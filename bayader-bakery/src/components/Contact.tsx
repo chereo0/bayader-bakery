@@ -7,27 +7,57 @@ import { SocialIcon } from './ui/Icon'
 import { useToast, ToastProvider } from './ui/Toast'
 import useReveal from '../hooks/useReveal'
 
-function ContactForm(){
-  const [name,setName] = useState('')
-  const [email,setEmail] = useState('')
-  const [msg,setMsg] = useState('')
+function ContactForm() {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [subject, setSubject] = useState('')
+  const [msg, setMsg] = useState('')
+  const [sending, setSending] = useState(false)
   const toast = useToast()
 
-  function handle(e:React.FormEvent){
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+  async function handle(e: React.FormEvent) {
     e.preventDefault()
-    if(!name || !email || !msg) return toast.show('Please fill all fields')
-    if(!/\S+@\S+\.\S+/.test(email)) return toast.show('Please enter a valid email')
-    toast.show("Thanks! We'll get back to you soon.")
-    setName(''); setEmail(''); setMsg('')
+    if (!name || !email || !subject || !msg) return toast.show('Please fill all fields')
+    if (!/\S+@\S+\.\S+/.test(email)) return toast.show('Please enter a valid email')
+
+    setSending(true)
+    try {
+      const res = await fetch(`${API_URL}/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, subject, message: msg })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to send message')
+      }
+
+      toast.show(data.message || "Thanks! We'll get back to you soon.")
+      setName(''); setEmail(''); setSubject(''); setMsg('')
+    } catch (err: any) {
+      console.error(err)
+      toast.show(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
     <Card className="p-6">
       <form onSubmit={handle} className="space-y-4">
-        <Input placeholder="Name" value={name} onChange={e=> setName((e.target as HTMLInputElement).value)} />
-        <Input placeholder="Email" value={email} onChange={e=> setEmail((e.target as HTMLInputElement).value)} />
-        <Textarea placeholder="Message" value={msg} onChange={e=> setMsg((e.target as HTMLTextAreaElement).value)} />
-        <Button type="submit">Send Message</Button>
+        <Input placeholder="Name" value={name} onChange={e => setName((e.target as HTMLInputElement).value)} disabled={sending} />
+        <Input placeholder="Email" value={email} onChange={e => setEmail((e.target as HTMLInputElement).value)} disabled={sending} />
+        <Input placeholder="Subject" value={subject} onChange={e => setSubject((e.target as HTMLInputElement).value)} disabled={sending} />
+        <Textarea placeholder="Message" value={msg} onChange={e => setMsg((e.target as HTMLTextAreaElement).value)} disabled={sending} />
+        <Button type="submit" disabled={sending}>
+          {sending ? 'Sending...' : 'Send Message'}
+        </Button>
       </form>
       <div className="mt-4 text-sm text-bakery-800">
         <div className="font-medium">123 Bakery Lane</div>
@@ -42,7 +72,7 @@ function ContactForm(){
   )
 }
 
-export default function Contact(){
+export default function Contact() {
   const ref = useReveal()
   return (
     <ToastProvider>

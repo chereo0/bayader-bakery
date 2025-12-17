@@ -14,7 +14,9 @@ const logger = require('./utils/logger');
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({ origin: config.FRONTEND_URL === '*' ? true : config.FRONTEND_URL }));
 app.use(express.json({ limit: '10mb' }));
 // Serve uploaded images
@@ -42,6 +44,7 @@ app.use('/api/inventory-alerts', require('./routes/inventoryAlerts'));
 app.use('/api/production', require('./routes/production'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/contact', require('./routes/contact'));
 // Materials management routes (for material-based inventory)
 app.use('/api/materials', require('./routes/materials'));
 // Inventory routes (wraps product stock operations and inventory queries)
