@@ -1,6 +1,7 @@
 const Message = require('../models/Message');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const mongoose = require('mongoose');
 
 // GET /api/messages - List messages for current user (inbox)
 // Supports ?fromRole=admin|staff|driver to filter by sender role
@@ -28,6 +29,7 @@ const listMessages = async (req, res) => {
     const total = await Message.countDocuments(filter);
     const messages = await Message.find(filter)
       .populate('from', 'name email role')
+      .populate('to', 'name email role')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -48,24 +50,95 @@ const getConversations = async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 20);
     const archived = req.query.archived === 'true';
-    // Show all messages where user is sender OR receiver
-    const filter = {
+    
+    // Base match criteria
+    const matchStage = {
       $or: [
-        { to: req.user.id, isArchived: archived },
-        { from: req.user.id, isArchived: archived }
-      ]
+        { to: new mongoose.Types.ObjectId(req.user.id) },
+        { from: new mongoose.Types.ObjectId(req.user.id) }
+      ],
+      isArchived: archived
     };
 
     // Filter by read status if specified
-    if (req.query.read === 'true') filter.read = true;
-    if (req.query.read === 'false') filter.read = false;
+    if (req.query.read === 'true') matchStage.read = true;
+    if (req.query.read === 'false') matchStage.read = false;
 
-    const total = await Message.countDocuments(filter);
-    const messages = await Message.find(filter)
-      .populate('from', 'name email role')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const aggregation = [
+      // 1. Match relevant messages
+      { $match: matchStage },
+      // 2. Sort by newest first to ensure we pick the latest message
+      { $sort: { createdAt: -1 } },
+      // 3. Group by "conversation partner"
+      {
+        $group: {
+          _id: {
+            $cond: {
+              if: { $eq: ["$from", new mongoose.Types.ObjectId(req.user.id)] },
+              then: "$to",
+              else: "$from"
+            }
+          },
+          lastMessage: { $first: "$$ROOT" }
+        }
+      },
+      // 4. Restore the message document structure
+      { $replaceRoot: { newRoot: "$lastMessage" } },
+      // 5. Sort conversations by last message time
+      { $sort: { createdAt: -1 } },
+      // 6. Pagination & Population in Facet
+      {
+        $facet: {
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            // Populate sender
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'from',
+                foreignField: '_id',
+                as: 'from'
+              }
+            },
+            { $unwind: { path: '$from', preserveNullAndEmptyArrays: true } },
+            // Populate recipient
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'to',
+                foreignField: '_id',
+                as: 'to'
+              }
+            },
+            { $unwind: { path: '$to', preserveNullAndEmptyArrays: true } },
+            // Project needed fields
+            {
+               $project: {
+                   subject: 1,
+                   message: 1,
+                   body: 1,
+                   read: 1,
+                   readAt: 1,
+                   type: 1,
+                   createdAt: 1,
+                   updatedAt: 1,
+                   isArchived: 1,
+                   'from._id': 1, 'from.name': 1, 'from.email': 1, 'from.role': 1,
+                   'to._id': 1, 'to.name': 1, 'to.email': 1, 'to.role': 1
+               }
+            }
+          ],
+          totalCount: [
+            { $count: 'total' }
+          ]
+        }
+      }
+    ];
+
+    const result = await Message.aggregate(aggregation);
+    const messages = result[0].data;
+    const total = result[0].totalCount[0] ? result[0].totalCount[0].total : 0;
 
     res.json({
       success: true,
@@ -73,6 +146,7 @@ const getConversations = async (req, res) => {
       meta: { total, page, limit, unreadCount: await Message.countDocuments({ to: req.user.id, read: false, isArchived: false }) }
     });
   } catch (err) {
+    console.error('getConversations error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -128,6 +202,7 @@ const sendMessage = async (req, res) => {
 
     await newMessage.save();
     await newMessage.populate('from', 'name email role');
+    await newMessage.populate('to', 'name email role');
 
     // Create notification for the recipient
     try {
@@ -287,6 +362,89 @@ const getUnreadCount = async (req, res) => {
   }
 };
 
+// GET /api/messages/thread/:userId - Get conversation thread with a specific user
+const getThread = async (req, res) => {
+  try {
+    const otherUserId = req.params.userId;
+    const currentUserId = req.user.id;
+
+    // Validate otherUserId
+    if (!otherUserId) {
+       return res.status(400).json({ success: false, message: 'User ID is required' });
+    }
+
+    const messages = await Message.find({
+      $or: [
+        { from: currentUserId, to: otherUserId },
+        { from: otherUserId, to: currentUserId }
+      ],
+      // We generally want to see archived messages in a thread view if the conversation is open,
+      // or we can filter them out. Let's include them for now to show full history unless specific requirement says otherwise.
+      // But typically "Archive" acts like "Hidden from inbox list". If I explicitly open a chat, I might want to see history.
+      // However, existing simple logic filtered archived. Let's stick to showing non-archived for safety or allow query param.
+      // For now, let's show ALL to ensure context, unless user deleted (which is different).
+      // isArchived is usually per-message. If I archived a message, it shouldn't show in main list.
+      // But in a thread view? Logic can be tricky.
+      // Let's assume for "Chat View" we want to see everything 
+      // OR let's respect isArchived=false to be consistent with "Inbox".
+      isArchived: false 
+    })
+    .sort({ createdAt: 1 }) // Oldest first for chat history
+    .populate('from', 'name email role');
+
+    res.json({
+      success: true,
+      data: messages
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Archive entire conversation with a user
+const archiveConversation = async (req, res) => {
+  try {
+    const partnerId = req.params.partnerId;
+    const userId = req.user.id;
+
+    await Message.updateMany(
+      {
+        $or: [
+          { from: userId, to: partnerId },
+          { from: partnerId, to: userId }
+        ]
+      },
+      { isArchived: true, archivedAt: Date.now() }
+    );
+
+    res.json({ success: true, message: 'Conversation archived' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Unarchive entire conversation with a user
+const unarchiveConversation = async (req, res) => {
+  try {
+    const partnerId = req.params.partnerId;
+    const userId = req.user.id;
+
+    await Message.updateMany(
+      {
+        $or: [
+          { from: userId, to: partnerId },
+          { from: partnerId, to: userId }
+        ]
+      },
+      { isArchived: false, archivedAt: null }
+    );
+
+    res.json({ success: true, message: 'Conversation unarchived' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   listMessages,
   getConversations,
@@ -296,5 +454,8 @@ module.exports = {
   markAsUnread,
   deleteMessage,
   unarchiveMessage,
-  getUnreadCount
+  getUnreadCount,
+  getThread,
+  archiveConversation,
+  unarchiveConversation
 };

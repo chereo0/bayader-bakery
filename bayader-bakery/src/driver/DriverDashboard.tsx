@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast, Toaster } from 'react-hot-toast'
 import DriverSidebar from './DriverSidebar'
 import DriverNavbar from './DriverNavbar'
@@ -11,13 +12,14 @@ import { socketService } from '../services/socketService'
 import { useAuth } from '../context/AuthContext'
 
 const DriverDashboard: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<string>('Dashboard')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedTab = searchParams.get('tab') || 'Dashboard'
   const { token } = useAuth()
-  
+
   // Apply dark mode based on localStorage theme and listen for changes
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light'
-    
+
     if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark')
     } else {
@@ -48,23 +50,23 @@ const DriverDashboard: React.FC = () => {
       window.removeEventListener('themeChanged', handleThemeChange)
     }
   }, [])
-  
+
   // Connect to WebSocket on mount
   useEffect(() => {
     if (!token) return
 
     socketService.connect(token)
-    
+
     // Define handlers
     const handleNotification = (notification: any) => {
       console.log('[DriverDashboard] Received notification:', notification)
-      
+
       // Show toast based on notification type
       const toastOptions = {
         duration: 5000,
         position: 'top-right' as const,
       }
-      
+
       switch (notification.type) {
         case 'alert':
           toast.error(notification.message, toastOptions)
@@ -76,7 +78,7 @@ const DriverDashboard: React.FC = () => {
           toast(notification.message, toastOptions)
       }
     }
-    
+
     const handleOrderUpdate = (order: any) => {
       console.log('[DriverDashboard] Order update:', order)
       toast(`Order #${order.orderNumber} updated`, {
@@ -88,7 +90,7 @@ const DriverDashboard: React.FC = () => {
     // Listen for events
     socketService.on('notification', handleNotification)
     socketService.on('order:update', handleOrderUpdate)
-    
+
     // Cleanup on unmount
     return () => {
       socketService.off('notification', handleNotification)
@@ -118,7 +120,7 @@ const DriverDashboard: React.FC = () => {
     <div className="min-h-screen bg-[#F5F1E8] dark:bg-gray-900">
       <DriverNavbar />
       <div className="flex">
-        <DriverSidebar selected={selectedTab} onSelect={setSelectedTab} />
+        <DriverSidebar selected={selectedTab} onSelect={(tab) => setSearchParams({ tab })} />
         <div className="flex-1">
           <main className="p-6 max-w-7xl mx-auto">
             {renderContent()}

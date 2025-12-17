@@ -15,6 +15,7 @@ interface OrderDisplay {
   assignmentStatus?: string
   phone?: string
   estimatedDeliveryDate?: string
+  paymentStatus?: string
 }
 
 const MyDeliveriesPage: React.FC = () => {
@@ -22,13 +23,13 @@ const MyDeliveriesPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'pending' | 'assigned' | 'in-transit' | 'delivered'>('pending')
-  
+
   // Modals
   const [acceptRejectModal, setAcceptRejectModal] = useState<{
     isOpen: boolean
     order: OrderDisplay | null
   }>({ isOpen: false, order: null })
-  
+
   const [issueReportModal, setIssueReportModal] = useState<{
     isOpen: boolean
     order: OrderDisplay | null
@@ -38,7 +39,11 @@ const MyDeliveriesPage: React.FC = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        setLoading(true)
+        // Only set loading on first load if we don't have orders yet
+        if (orders.length === 0) {
+          setLoading(true)
+        }
+
         const data = await orderService.getMyOrders()
 
         // Transform backend order data to display format
@@ -52,6 +57,7 @@ const MyDeliveriesPage: React.FC = () => {
           assignmentStatus: o.assignmentStatus,
           phone: o.user?.phone,
           estimatedDeliveryDate: o.estimatedDeliveryDate,
+          paymentStatus: o.payment?.paid ? 'Paid' : 'Pending Payment',
         }))
 
         setOrders(transformed)
@@ -59,19 +65,19 @@ const MyDeliveriesPage: React.FC = () => {
       } catch (err) {
         console.error('Error fetching orders:', err)
         setError('Failed to load orders. Please try again.')
-        setOrders([])
+        // Don't clear orders on error, just keep old ones if any
       } finally {
         setLoading(false)
       }
     }
 
     fetchOrders()
-    
+
     // Set up polling for order refresh every 15 seconds
     const ordersInterval = setInterval(() => {
       fetchOrders()
     }, 15000)
-    
+
     // Cleanup
     return () => {
       clearInterval(ordersInterval)
@@ -97,19 +103,19 @@ const MyDeliveriesPage: React.FC = () => {
 
   const handleAcceptOrder = async () => {
     if (!acceptRejectModal.order) return
-    
+
     try {
       await orderService.acceptOrder(acceptRejectModal.order.id)
-      
+
       // Update in frontend
       setOrders(prev =>
         prev.map(o =>
-          o.id === acceptRejectModal.order!.id 
-            ? { ...o, assignmentStatus: 'accepted', deliveryStatus: 'assigned' } 
+          o.id === acceptRejectModal.order!.id
+            ? { ...o, assignmentStatus: 'accepted', deliveryStatus: 'assigned' }
             : o
         )
       )
-      
+
       toast.success('Order accepted successfully! 🎉')
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Failed to accept order'
@@ -120,15 +126,15 @@ const MyDeliveriesPage: React.FC = () => {
 
   const handleRejectOrder = async (reason: string) => {
     if (!acceptRejectModal.order) return
-    
+
     try {
       await orderService.rejectOrder(acceptRejectModal.order.id, reason)
-      
+
       // Remove from list or mark as rejected
       setOrders(prev =>
         prev.filter(o => o.id !== acceptRejectModal.order!.id)
       )
-      
+
       toast.success('Order rejected. It will be reassigned.')
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Failed to reject order'
@@ -144,7 +150,7 @@ const MyDeliveriesPage: React.FC = () => {
     longitude?: number
   ) => {
     if (!issueReportModal.order) return
-    
+
     try {
       await orderService.reportIssue(
         issueReportModal.order.id,
@@ -153,7 +159,7 @@ const MyDeliveriesPage: React.FC = () => {
         latitude,
         longitude
       )
-      
+
       toast.success('Issue reported successfully. Admin has been notified.')
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Failed to report issue'
@@ -206,31 +212,28 @@ const MyDeliveriesPage: React.FC = () => {
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveTab('pending')}
-                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                  activeTab === 'pending'
-                    ? 'bg-[#fffaf4] text-[#5E372E] border-t-2 border-[#5E372E] -mb-[1px]'
-                    : 'bg-transparent text-[#6b4f45] hover:text-[#5E372E]'
-                }`}
+                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === 'pending'
+                  ? 'bg-[#fffaf4] text-[#5E372E] border-t-2 border-[#5E372E] -mb-[1px]'
+                  : 'bg-transparent text-[#6b4f45] hover:text-[#5E372E]'
+                  }`}
               >
                 Pending ({pendingCount})
               </button>
               <button
                 onClick={() => setActiveTab('in-transit')}
-                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                  activeTab === 'in-transit'
-                    ? 'bg-[#fffaf4] text-[#5E372E] border-t-2 border-[#5E372E] -mb-[1px]'
-                    : 'bg-transparent text-[#6b4f45] hover:text-[#5E372E]'
-                }`}
+                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === 'in-transit'
+                  ? 'bg-[#fffaf4] text-[#5E372E] border-t-2 border-[#5E372E] -mb-[1px]'
+                  : 'bg-transparent text-[#6b4f45] hover:text-[#5E372E]'
+                  }`}
               >
                 In Transit ({inTransitCount})
               </button>
               <button
                 onClick={() => setActiveTab('delivered')}
-                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-                  activeTab === 'delivered'
-                    ? 'bg-[#fffaf4] text-[#5E372E] border-t-2 border-[#5E372E] -mb-[1px]'
-                    : 'bg-transparent text-[#6b4f45] hover:text-[#5E372E]'
-                }`}
+                className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${activeTab === 'delivered'
+                  ? 'bg-[#fffaf4] text-[#5E372E] border-t-2 border-[#5E372E] -mb-[1px]'
+                  : 'bg-transparent text-[#6b4f45] hover:text-[#5E372E]'
+                  }`}
               >
                 Delivered ({deliveredCount})
               </button>
@@ -256,7 +259,7 @@ const MyDeliveriesPage: React.FC = () => {
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderService.getDeliveryStatusClass(order.deliveryStatus)}`}>
                           {orderService.getDeliveryStatusLabel(order.deliveryStatus)}
                         </span>
-                        {order.assignmentStatus === 'pending' && (
+                        {order.assignmentStatus === 'pending' && order.deliveryStatus !== 'delivered' && (
                           <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                             ⏳ Awaiting Response
                           </span>
@@ -281,12 +284,15 @@ const MyDeliveriesPage: React.FC = () => {
                       <p className="text-sm font-semibold text-[#5E372E]">
                         Amount: ${order.totalAmount.toFixed(2)}
                       </p>
+                      <p className={`text-sm font-medium ${order.paymentStatus === 'Paid' ? 'text-green-600' : 'text-orange-600'}`}>
+                        {order.paymentStatus === 'Paid' ? '✓ Payment Completed' : '⏳ Payment Pending'}
+                      </p>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex flex-col gap-2">
                       {/* Accept/Reject for pending assignments */}
-                      {order.assignmentStatus === 'pending' && (
+                      {order.assignmentStatus === 'pending' && order.deliveryStatus !== 'delivered' && (
                         <button
                           onClick={() => setAcceptRejectModal({ isOpen: true, order })}
                           className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors text-sm font-medium whitespace-nowrap"
@@ -296,9 +302,9 @@ const MyDeliveriesPage: React.FC = () => {
                       )}
 
                       {/* Start delivery for accepted/assigned orders */}
-                      {(order.assignmentStatus === 'accepted' || order.deliveryStatus === 'assigned') && 
-                       order.deliveryStatus !== 'in-transit' && 
-                       order.deliveryStatus !== 'delivered' ? (
+                      {(order.assignmentStatus === 'accepted' || order.deliveryStatus === 'assigned') &&
+                        order.deliveryStatus !== 'in-transit' &&
+                        order.deliveryStatus !== 'delivered' ? (
                         <button
                           onClick={() => handleStatusChange(order.id, 'in-transit')}
                           className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium whitespace-nowrap"

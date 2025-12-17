@@ -803,6 +803,49 @@ const updateDeliveryStatus = async (req, res, next) => {
     if (!validTransitions[order.deliveryStatus].includes(deliveryStatus)) {
       return res.status(400).json({
         success: false,
+        message: `Cannot transition from '${order.deliveryStatus}' to '${deliveryStatus}'`
+      });
+    }
+
+    // Update delivery status
+    order.deliveryStatus = deliveryStatus;
+
+    // Special handling for 'delivered' status
+    if (deliveryStatus === 'delivered') {
+      order.status = 'delivered'; // Sync main status
+      order.payment.paid = true;  // Mark payment as completed
+      order.actualDeliveryDate = actualDeliveryDate || new Date();
+    }
+
+    await order.save();
+
+    logger.info(`Delivery status updated for order ${id} to ${deliveryStatus}`);
+
+    // Send email notification (optional, kept existing pattern if any)
+    try {
+      const customer = await User.findById(order.user);
+      if (customer && deliveryStatus === 'delivered') {
+        sendOrderStatusChangedEmail(customer, {
+          orderId: order.orderNumber,
+          status: 'delivered',
+          totalAmount: order.totalAmount,
+          items: order.items,
+          estimatedDeliveryTime: order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate).toLocaleDateString() : 'N/A',
+        }, 'out-for-delivery', 'delivered');
+      }
+    } catch (emailError) {
+      logger.error('Failed to send delivery email:', emailError);
+    }
+
+    res.json({ 
+      success: true, 
+      data: order,
+      message: `Delivery status updated to ${deliveryStatus}` 
+    });
+
+    if (!validTransitions[order.deliveryStatus].includes(deliveryStatus)) {
+      return res.status(400).json({
+        success: false,
         message: `Cannot transition from '${order.deliveryStatus}' to '${deliveryStatus}'. Valid transitions: ${validTransitions[order.deliveryStatus].join(', ')}`
       });
     }

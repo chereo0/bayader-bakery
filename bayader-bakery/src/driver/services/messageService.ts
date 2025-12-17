@@ -18,6 +18,11 @@ export interface Message {
   updatedAt: string
   recipientId?: string
   senderId?: string
+  to: {
+    _id: string
+    name: string
+    role: string
+  }
 }
 
 export interface MessageResponse {
@@ -111,6 +116,31 @@ class MessageService {
   }
 
   /**
+   * Get potential recipients (Admin and Staff)
+   */
+  /**
+   * Get potential recipients (Admin and Staff)
+   */
+  async getRecipients(): Promise<{ _id: string; name: string; role: string }[]> {
+    try {
+      // Fetch users with roles 'admin' and 'staff' using the main API URL
+      const response = await this.api.get<any>('/users', {
+        baseURL: API_BASE_URL // Override to point to /api/users
+      });
+
+      if (response.data.success) {
+        return response.data.data.filter((u: any) =>
+          ['admin', 'staff'].includes(u.role?.toLowerCase())
+        );
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch recipients:', error)
+      return []
+    }
+  }
+
+  /**
    * Send a new message
    */
   async sendMessage(recipientId: string, subject: string, body: string): Promise<Message> {
@@ -196,6 +226,48 @@ class MessageService {
       return 'Yesterday'
     } else {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+  }
+
+  /**
+   * Get conversation thread with a specific user
+   */
+  async getThread(userId: string): Promise<Message[]> {
+    try {
+      const response = await this.api.get<MessageResponse>(`/thread/${userId}`);
+      if (Array.isArray(response.data.data)) {
+        return response.data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error(`Failed to fetch thread with user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Archive an entire conversation with a user
+   */
+  async archiveConversation(partnerId: string): Promise<any> {
+    try {
+      const response = await this.api.put(`/conversations/${partnerId}/archive`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to archive conversation with ${partnerId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unarchive an entire conversation with a user
+   */
+  async unarchiveConversation(partnerId: string): Promise<any> {
+    try {
+      const response = await this.api.put(`/conversations/${partnerId}/unarchive`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to unarchive conversation with ${partnerId}:`, error);
+      throw error;
     }
   }
 }

@@ -71,8 +71,11 @@ const MessagesIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
 const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  /* State for notification count */
   const [unreadCount, setUnreadCount] = useState(0)
-  
+  /* State for message count */
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0)
+
   // Removed Feedback and Promotions per request
   const items: Item[] = [
     { key: 'Dashboard', label: 'Dashboard' },
@@ -87,46 +90,70 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
     { key: 'Messages', label: 'Messages' }
   ]
 
-  // Fetch unread notification count
+  // Fetch unread counts
   useEffect(() => {
-    fetchUnreadCount()
-    const interval = setInterval(fetchUnreadCount, 5000) // Poll every 5 seconds
+    const fetchCounts = () => {
+      fetchUnreadCount()
+      fetchUnreadMsgCount()
+    }
+
+    fetchCounts()
+    const interval = setInterval(fetchCounts, 5000) // Poll every 5 seconds
     return () => clearInterval(interval)
   }, [])
 
+  const fetchUnreadMsgCount = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/messages/unread/count', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setUnreadMsgCount(data.data.unreadCount || 0)
+        }
+      }
+    } catch (error) {
+      console.error('[ADMIN-SIDEBAR] ❌ Failed to fetch message count:', error)
+    }
+  }
+
   const fetchUnreadCount = async () => {
     try {
-      console.log('[ADMIN-SIDEBAR] 🔔 Fetching notifications...')
+      // console.log('[ADMIN-SIDEBAR] 🔔 Fetching notifications...')
       const token = localStorage.getItem('token')
-      if (!token) {
-        console.log('[ADMIN-SIDEBAR] ❌ No token found')
-        return
-      }
+      if (!token) return
 
       const response = await fetch('/api/notifications/unread-count', {
         headers: { Authorization: `Bearer ${token}` }
       })
-      
-      console.log('[ADMIN-SIDEBAR] 🔔 Response status:', response.status)
-      
+
       if (response.ok) {
         const data = await response.json()
         const unread = data?.data?.unreadCount ?? 0
-        console.log('[ADMIN-SIDEBAR] 🔔 Unread count (server):', unread)
         setUnreadCount(unread)
-      } else {
-        console.log('[ADMIN-SIDEBAR] ❌ Response not ok:', await response.text())
       }
     } catch (error) {
       console.error('[ADMIN-SIDEBAR] ❌ Failed to fetch notifications:', error)
     }
   }
 
-  // Listen for global notifications updates to immediately refresh badge
+  // Listen for global updates
   useEffect(() => {
-    const handler = () => fetchUnreadCount()
+    const handler = () => {
+      fetchUnreadCount()
+      fetchUnreadMsgCount()
+    }
     window.addEventListener('notifications-updated', handler)
-    return () => window.removeEventListener('notifications-updated', handler)
+    window.addEventListener('messages-updated', handler) // Assumed event if exists, otherwise polling handles it
+    return () => {
+      window.removeEventListener('notifications-updated', handler)
+      window.removeEventListener('messages-updated', handler)
+    }
   }, [])
 
   const renderIcon = (key: string) => {
@@ -152,7 +179,7 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
           <div className="p-6 border-b border-b-[#6f453f]">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-2xl">EL-Bayader Admin</h2>
-              <button 
+              <button
                 onClick={() => onSelect && onSelect('Notifications')}
                 className="relative hover:opacity-80 transition-opacity"
               >
@@ -177,7 +204,12 @@ const Sidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
                     <span className="w-6 h-6 text-[#f3e9e5] flex items-center justify-center">
                       {renderIcon(it.key)}
                     </span>
-                    <span className="font-medium">{it.label}</span>
+                    <span className="font-medium flex-1">{it.label}</span>
+                    {it.key === 'Messages' && unreadMsgCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                        {unreadMsgCount}
+                      </span>
+                    )}
                   </button>
                 </li>
               ))}

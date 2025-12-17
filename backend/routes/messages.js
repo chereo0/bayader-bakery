@@ -11,20 +11,33 @@ const {
   markAsUnread,
   deleteMessage,
   unarchiveMessage,
-  getUnreadCount
+  getUnreadCount,
+  getThread,
+  archiveConversation,
+  unarchiveConversation
 } = require('../controllers/messageController');
 
 // All message routes require authentication
 router.use(auth);
 
+// Block customers from accessing any message routes
+router.use(requireRole('admin', 'staff', 'driver'));
+
 // GET conversations (all messages where user is sender or receiver)
 router.get('/conversations/all', getConversations);
+
+// Archive/Unarchive conversation
+router.put('/conversations/:partnerId/archive', archiveConversation);
+router.put('/conversations/:partnerId/unarchive', unarchiveConversation);
 
 // GET messages (inbox only - messages TO user)
 router.get('/', listMessages);
 
 // GET unread count
 router.get('/unread/count', getUnreadCount);
+
+// GET thread history
+router.get('/thread/:userId', getThread);
 
 // GET specific message
 router.get('/:id', getMessage);

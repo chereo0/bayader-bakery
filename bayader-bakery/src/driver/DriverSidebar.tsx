@@ -39,6 +39,8 @@ const SettingsIcon = () => (
 )
 
 const DriverSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) => {
+  const [unreadMsgCount, setUnreadMsgCount] = React.useState(0)
+
   const items: Item[] = [
     { key: 'Dashboard', label: 'Dashboard', icon: <HomeIcon /> },
     { key: 'My Deliveries', label: 'My Deliveries', icon: <TruckIcon /> },
@@ -46,6 +48,39 @@ const DriverSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) =>
     { key: 'Messages', label: 'Messages', icon: <MessageCircleIcon /> },
     { key: 'Settings', label: 'Settings', icon: <SettingsIcon /> },
   ]
+
+  React.useEffect(() => {
+    const fetchUnreadMsgCount = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch('/api/messages/unread/count', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setUnreadMsgCount(data.data.unreadCount || 0)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch message count:', error)
+      }
+    }
+
+    fetchUnreadMsgCount()
+    const interval = setInterval(fetchUnreadMsgCount, 5000)
+
+    const handler = () => fetchUnreadMsgCount()
+    window.addEventListener('messages-updated', handler)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('messages-updated', handler)
+    }
+  }, [])
 
   return (
     <aside className="w-64 bg-[#5E372E] text-white min-h-screen hidden md:block">
@@ -59,16 +94,20 @@ const DriverSidebar: React.FC<Props> = ({ selected = 'Dashboard', onSelect }) =>
             <li key={it.key} className="group">
               <button
                 onClick={() => onSelect && onSelect(it.key)}
-                className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                  selected === it.key
-                    ? 'bg-gradient-to-r from-[#c79a63] to-[#d4ac6f] text-[#5E372E]'
-                    : 'hover:bg-[#6b453f]'
-                }`}
+                className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${selected === it.key
+                  ? 'bg-gradient-to-r from-[#c79a63] to-[#d4ac6f] text-[#5E372E]'
+                  : 'hover:bg-[#6b453f]'
+                  }`}
               >
                 <span className={`w-6 h-6 flex items-center justify-center ${selected === it.key ? 'text-[#5E372E]' : 'text-[#f3e9e5]'}`}>
                   {it.icon}
                 </span>
-                <span className="font-medium">{it.label}</span>
+                <span className="font-medium flex-1">{it.label}</span>
+                {it.key === 'Messages' && unreadMsgCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {unreadMsgCount}
+                  </span>
+                )}
               </button>
             </li>
           ))}

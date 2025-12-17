@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import messageService, { Message } from './services/messageService'
+import { MessageLayout } from '../components/messages/MessageLayout';
+import { MessageList } from '../components/messages/MessageList';
+import { MessageDetail } from '../components/messages/MessageDetail';
 
 const MessagesPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [selectedThread, setSelectedThread] = useState<Message[]>([])
   const [composingReply, setComposingReply] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [activeTab, setActiveTab] = useState<'inbox' | 'archived'>('inbox')
@@ -17,8 +21,15 @@ const MessagesPage: React.FC = () => {
         setLoading(true)
         const archived = activeTab === 'archived'
         const data = await messageService.getMessages(archived)
-        // Filter to show only staff messages (admin and staff roles)
-        const staffMessages = data.filter(m => m.from?.role === 'admin' || m.from?.role === 'staff' || m.type === 'admin')
+        // Filter to show conversations involving admin, staff, or self (driver)
+        // Since getMessages returns conversations where the user is a participant, we should be careful not to over-filter.
+        // We want to see messages from Admin/Staff, OR messages sent by ME (Driver).
+        const staffMessages = data.filter(m =>
+          m.from?.role === 'admin' ||
+          m.from?.role === 'staff' ||
+          m.from?.role === 'driver' || // Include my own sent messages
+          m.type === 'admin'
+        );
         setMessages(staffMessages)
         setError(null)
       } catch (err) {
@@ -27,9 +38,9 @@ const MessagesPage: React.FC = () => {
         // Demo data fallback - Staff only
         setMessages([
           {
-            _id: '1',
+            _id: '507f1f77bcf86cd799439011',
             from: {
-              _id: 'admin1',
+              _id: '507f1f77bcf86cd799439012',
               name: 'Staff Admin',
               email: 'admin@bayader.com',
               role: 'admin'
@@ -40,11 +51,16 @@ const MessagesPage: React.FC = () => {
             type: 'admin',
             createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
             updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            to: {
+              _id: 'driver_id_demo',
+              name: 'Demo Driver',
+              role: 'driver'
+            }
           },
           {
-            _id: '2',
+            _id: '507f1f77bcf86cd799439013',
             from: {
-              _id: 'staff1',
+              _id: '507f1f77bcf86cd799439014',
               name: 'Operations Manager',
               email: 'ops@bayader.com',
               role: 'staff'
@@ -55,11 +71,16 @@ const MessagesPage: React.FC = () => {
             type: 'admin',
             createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
             updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+            to: {
+              _id: 'driver_id_demo',
+              name: 'Demo Driver',
+              role: 'driver'
+            }
           },
           {
-            _id: '3',
+            _id: '507f1f77bcf86cd799439015',
             from: {
-              _id: 'staff2',
+              _id: '507f1f77bcf86cd799439016',
               name: 'Delivery Coordinator',
               email: 'delivery@bayader.com',
               role: 'staff'
@@ -70,6 +91,11 @@ const MessagesPage: React.FC = () => {
             type: 'admin',
             createdAt: new Date(Date.now() - 0.5 * 60 * 60 * 1000).toISOString(),
             updatedAt: new Date(Date.now() - 0.5 * 60 * 60 * 1000).toISOString(),
+            to: {
+              _id: 'driver_id_demo',
+              name: 'Demo Driver',
+              role: 'driver'
+            }
           },
         ])
       } finally {
@@ -80,21 +106,42 @@ const MessagesPage: React.FC = () => {
     fetchMessages()
   }, [activeTab])
 
-  const unreadCount = messages.filter(m => !m.read).length
+
 
   const handleSelectMessage = async (message: Message) => {
-    setSelectedMessage(message)
+    setSelectedMessage(message);
+    setSelectedThread([]); // Clear previous thread immediately
+
+    // Fetch full conversation thread
+    try {
+      // Determine partner ID
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const myId = user._id || user.id;
+      // If I am the sender, the partner is the recipient (to). If I am the recipient, the partner is the sender (from).
+      // Note: 'to' might be an object or string depending on population, but here message is likely populated.
+      // Safely access _id if it's an object, or use it directly if it's a string, though our type usually says object.
+      const partnerId = (message.from._id === myId) ? (message.to?._id || message.to) : message.from._id;
+
+      const thread = await messageService.getThread(partnerId as string);
+      setSelectedThread(thread);
+    } catch (err) {
+      console.error('Error fetching thread:', err);
+    }
+
     if (!message.read) {
       try {
         await messageService.markAsRead(message._id)
         setMessages(prev =>
           prev.map(m => m._id === message._id ? { ...m, read: true } : m)
         )
+        window.dispatchEvent(new Event('messages-updated'))
       } catch (err) {
         console.error('Error marking message as read:', err)
       }
     }
   }
+
+  // ... (rest of component)
 
   const handleReply = async () => {
     if (!selectedMessage || !replyText.trim()) return
@@ -108,225 +155,294 @@ const MessagesPage: React.FC = () => {
       setReplyText('')
       setComposingReply(false)
       alert('Reply sent successfully!')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error sending reply:', err)
-      alert('Failed to send reply')
+      alert(`Failed to send reply: ${err.response?.data?.message || err.message}`)
     }
-  }
+  };
 
-  const handleArchive = async (messageId: string) => {
+  const handleArchive = async (message: Message) => {
     try {
-      await messageService.archiveMessage(messageId)
-      setMessages(prev => prev.filter(m => m._id !== messageId))
-      if (selectedMessage?._id === messageId) {
+      // proper partner ID logic
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const myId = user._id || user.id;
+      const partnerId = (message.from._id === myId) ? (message.to?._id || message.to) : message.from._id;
+      // Use string cast or object access
+      const pid = typeof partnerId === 'object' ? partnerId._id : partnerId;
+
+      await messageService.archiveConversation(pid as string)
+
+      // Remove all messages from this partner in the list. 
+      // Actually we just need to remove the conversation item which is represented by this message.
+      // But wait, 'messages' list is a list of CONVERSATIONS (latest message). 
+      // If we archive the whole conversation, this item should disappear.
+      setMessages(prev => prev.filter(m => m._id !== message._id))
+
+      if (selectedMessage?._id === message._id) {
         setSelectedMessage(null)
       }
     } catch (err) {
-      console.error('Error archiving message:', err)
-      alert('Failed to archive message')
+      console.error('Error archiving conversation:', err)
+      alert('Failed to archive conversation')
     }
-  }
+  };
 
-  const handleUnarchive = async (messageId: string) => {
+  const handleUnarchive = async (message: Message) => {
     try {
-      await messageService.unarchiveMessage(messageId)
-      setMessages(prev => prev.filter(m => m._id !== messageId))
-      if (selectedMessage?._id === messageId) {
+      // proper partner ID logic
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const myId = user._id || user.id;
+      const partnerId = (message.from._id === myId) ? (message.to?._id || message.to) : message.from._id;
+      const pid = typeof partnerId === 'object' ? partnerId._id : partnerId;
+
+      await messageService.unarchiveConversation(pid as string)
+      setMessages(prev => prev.filter(m => m._id !== message._id))
+      if (selectedMessage?._id === message._id) {
         setSelectedMessage(null)
       }
     } catch (err) {
-      console.error('Error unarchiving message:', err)
-      alert('Failed to unarchive message')
+      console.error('Error unarchiving conversation:', err)
+      alert('Failed to unarchive conversation')
     }
-  }
+  };
 
-  const getMessageTypeColor = (type: string) => {
-    switch (type) {
-      case 'system':
-        return 'border-blue-500 bg-blue-50'
-      case 'admin':
-        return 'border-red-500 bg-red-50'
-      case 'customer':
-        return 'border-green-500 bg-green-50'
-      default:
-        return 'border-gray-500 bg-gray-50'
+  const closeDetail = () => {
+    setSelectedMessage(null);
+  };
+
+  // Convert Message to the format expected by shared components if needed
+  // In this case, our Message interface likely aligns well enough, or we cast it.
+  // We need to ensure 'body' is passed effectively. The MessageDetail component checks for 'message' or 'body'.
+
+  const [showCompose, setShowCompose] = useState(false)
+  const [recipientId, setRecipientId] = useState('')
+  const [subject, setSubject] = useState('')
+  const [messageBody, setMessageBody] = useState('')
+  const [recipients, setRecipients] = useState<{ _id: string; name: string; role: string }[]>([])
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    // Load potential recipients when component mounts
+    const loadRecipients = async () => {
+      const users = await messageService.getRecipients();
+      setRecipients(users);
+    };
+    loadRecipients();
+  }, []);
+
+  const handleSendMessage = async () => {
+    if (!recipientId || !subject.trim() || !messageBody.trim()) {
+      alert('Please fill in all fields');
+      return;
     }
-  }
+
+    try {
+      setSending(true);
+      await messageService.sendMessage(recipientId, subject, messageBody);
+      setSubject('');
+      setMessageBody('');
+      setRecipientId('');
+      setShowCompose(false);
+      alert('Message sent successfully!');
+      // Refresh messages
+      setActiveTab('inbox'); // Switch to inbox or stay? Probably stay or refresh.
+      // Trigger fetch
+      const data = await messageService.getMessages(activeTab === 'archived');
+      const staffMessages = data.filter(m => m.from?.role === 'admin' || m.from?.role === 'staff' || m.type === 'admin');
+      setMessages(staffMessages);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      alert('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="bg-[#fffaf4] rounded-lg shadow-sm min-h-[600px] p-6">
+      {/* Error Message */}
       {error && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-4">
         <h2 className="text-2xl font-semibold text-[#5E372E]">Messages</h2>
-        {unreadCount > 0 && activeTab === 'inbox' && (
-          <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-            {unreadCount} unread
-          </span>
-        )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
-        <button
-          onClick={() => setActiveTab('inbox')}
-          className={`py-2 px-6 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'inbox'
-              ? 'border-[#c79a63] text-[#5E372E]'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Inbox
-        </button>
-        <button
-          onClick={() => setActiveTab('archived')}
-          className={`py-2 px-6 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'archived'
-              ? 'border-[#c79a63] text-[#5E372E]'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Archived
-        </button>
-      </div>
+      <MessageLayout mobileShowDetail={!!selectedMessage}>
+        <MessageList
+          messages={messages}
+          selectedId={selectedMessage?._id}
+          onSelect={(msg) => handleSelectMessage(msg as Message)}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onCompose={() => setShowCompose(true)}
+          loading={loading}
+          currentUserId={(() => {
+            try {
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              return user._id || user.id;
+            } catch (e) { return null; }
+          })()}
+        // No role filter for driver view in original code
+        />
+        <MessageDetail
+          message={selectedMessage as any}
+          onBack={closeDetail}
+          onArchive={handleArchive as any}
+          onRestore={handleUnarchive as any}
+          isArchivedTab={activeTab === 'archived'}
+          thread={selectedThread}
+          currentUserId={(() => {
+            try {
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              return user._id || user.id;
+            } catch (e) { return null; }
+          })()}
+          onSendReply={async (text) => {
+            if (!selectedMessage) return;
+            try {
+              // Determine recipient
+              let currentUserId: string | null = null;
+              try {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                  const user = JSON.parse(userStr);
+                  currentUserId = user._id || user.id;
+                }
+              } catch (e) { console.error('Error parsing user from local storage', e); }
 
-      {loading && (
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5E372E]"></div>
+              const recipientId = (selectedMessage.from._id === currentUserId)
+                ? selectedMessage.to._id
+                : selectedMessage.from._id;
+
+              const newMessage = await messageService.sendMessage(
+                recipientId,
+                `Re: ${selectedMessage.subject}`,
+                text
+              );
+
+              // 1. Append new message to the thread locally (Optimistic / Immediate update)
+              setSelectedThread(prev => [...prev, newMessage]);
+
+              // 2. Update the conversation list preview
+              // We need to move this conversation to the top and update its preview snippet/time
+              setMessages(prev => {
+                // Remove the old conversation entry for this thread
+                const otherMessages = prev.filter(m =>
+                  !((m.from._id === recipientId && m.to._id === currentUserId) ||
+                    (m.from._id === currentUserId && m.to._id === recipientId))
+                );
+                // Add the new message at the top as the new conversation preview
+                return [newMessage, ...otherMessages];
+              });
+
+            } catch (err: any) {
+              console.error('Error sending reply:', err);
+              alert(`Failed to send reply: ${err.response?.data?.message || err.message}`);
+            }
+          }}
+        />
+      </MessageLayout>
+
+      {/* Reply Modal */}
+      {composingReply && selectedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-[#5E372E] mb-4">Reply to {selectedMessage.from.name}</h3>
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Type your message here..."
+              className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E] mb-3"
+              rows={5}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setComposingReply(false)
+                  setReplyText('')
+                }}
+                className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReply}
+                disabled={!replyText.trim()}
+                className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors disabled:opacity-50"
+              >
+                Send Reply
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {!loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Messages List */}
-          <div className="lg:col-span-1 space-y-2 max-h-[600px] overflow-y-auto">
-            {messages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>No messages</p>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message._id}
-                  onClick={() => handleSelectMessage(message)}
-                  className={`p-4 rounded-lg cursor-pointer transition-colors border-l-4 ${
-                    selectedMessage?._id === message._id
-                      ? 'bg-[#5E372E] text-white border-l-[#c79a63]'
-                      : message.read
-                      ? 'bg-white hover:bg-[#f9f3eb] border-l-gray-300'
-                      : getMessageTypeColor(message.type)
-                  }`}
+      {/* New Message (Compose) Modal */}
+      {showCompose && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-[#5E372E] mb-4">New Message</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+                <select
+                  value={recipientId}
+                  onChange={(e) => setRecipientId(e.target.value)}
+                  className="w-full border border-[#f3e7d9] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className={`font-medium text-sm ${selectedMessage?._id === message._id ? 'text-white' : 'text-[#5E372E]'}`}>
-                      {message.from.name}
-                    </div>
-                    <span className={`text-xs ${selectedMessage?._id === message._id ? 'text-white/80' : 'text-[#6b4f45]'}`}>
-                      {messageService.formatTime(message.createdAt)}
-                    </span>
-                  </div>
-                  <p className={`text-sm truncate ${selectedMessage?._id === message._id ? 'text-white/90' : 'text-[#6b4f45]'}`}>
-                    {message.subject}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Message Detail */}
-          <div className="lg:col-span-2">
-            {selectedMessage ? (
-              <div className="bg-white rounded-lg shadow-sm p-6 max-h-[600px] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#f3e7d9]">
-                  <div>
-                    <h3 className="text-xl font-semibold text-[#5E372E]">{selectedMessage.subject}</h3>
-                    <div className="flex items-center gap-2 mt-2 text-sm text-[#6b4f45]">
-                      <span>From: {selectedMessage.from.name}</span>
-                      <span>•</span>
-                      <span>{messageService.formatTime(selectedMessage.createdAt)}</span>
-                    </div>
-                  </div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    selectedMessage.type === 'system'
-                      ? 'bg-blue-100 text-blue-800'
-                      : selectedMessage.type === 'admin'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {selectedMessage.type.charAt(0).toUpperCase() + selectedMessage.type.slice(1)}
-                  </span>
-                </div>
-                <div className="prose max-w-none mb-6">
-                  <p className="text-[#6b4f45] whitespace-pre-wrap">{selectedMessage.body}</p>
-                </div>
-
-                {composingReply ? (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-[#6b4f45] mb-2">Your Reply</label>
-                    <textarea
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Type your message here..."
-                      className="w-full border border-[#f3e7d9] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E] mb-3"
-                      rows={4}
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleReply}
-                        disabled={!replyText.trim()}
-                        className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors disabled:opacity-50"
-                      >
-                        Send Reply
-                      </button>
-                      <button
-                        onClick={() => {
-                          setComposingReply(false)
-                          setReplyText('')
-                        }}
-                        className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setComposingReply(true)}
-                      className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors"
-                    >
-                      Reply
-                    </button>
-                    {activeTab === 'inbox' ? (
-                      <button
-                        onClick={() => handleArchive(selectedMessage._id)}
-                        className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors"
-                      >
-                        Archive
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleUnarchive(selectedMessage._id)}
-                        className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors"
-                      >
-                        Unarchive
-                      </button>
-                    )}
-                  </div>
-                )}
+                  <option value="">Select Recipient...</option>
+                  {recipients.map(user => (
+                    <option key={user._id} value={user._id}>
+                      {user.name} ({user.role})
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <p className="text-gray-500">Select a message to view</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Enter subject"
+                  className="w-full border border-[#f3e7d9] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                />
               </div>
-            )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                <textarea
+                  value={messageBody}
+                  onChange={(e) => setMessageBody(e.target.value)}
+                  placeholder="Type your message..."
+                  rows={5}
+                  className="w-full border border-[#f3e7d9] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowCompose(false)
+                  setSubject('')
+                  setMessageBody('')
+                  setRecipientId('')
+                }}
+                className="px-4 py-2 border border-[#f3e7d9] text-[#5E372E] rounded-md hover:bg-[#f9f3eb] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={sending}
+                className="px-4 py-2 bg-[#5E372E] text-white rounded-md hover:bg-[#6b453f] transition-colors disabled:opacity-50"
+              >
+                {sending ? 'Sending...' : 'Send'}
+              </button>
+            </div>
           </div>
         </div>
       )}

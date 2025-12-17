@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import ProductsManagementPage from './products/ProductsManagementPage'
 import MaterialsManagementPage from './materials/MaterialsManagementPageSelfContained';
@@ -21,95 +22,96 @@ import QuickLinks from './QuickLinks'
 import ToastProvider from '../components/ui/Toast'
 
 const AdminDashboard: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<string>('Dashboard')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedTab = searchParams.get('tab') || 'Dashboard'
 
   return (
     <div className="min-h-screen bg-[#F5F1E8]">
       <div className="flex">
-        <Sidebar selected={selectedTab} onSelect={setSelectedTab} />
+        <Sidebar selected={selectedTab} onSelect={(tab) => setSearchParams({ tab })} />
         <div className="flex-1">
           <ToastProvider>
-          {/* use the main site Header for top navigation; removed duplicate admin Navbar */}
-          <main className="p-6 max-w-7xl mx-auto">
-            {selectedTab === 'Dashboard' && (
-              <>
-                <DashboardStats />
+            {/* use the main site Header for top navigation; removed duplicate admin Navbar */}
+            <main className="p-6 max-w-7xl mx-auto">
+              {selectedTab === 'Dashboard' && (
+                <>
+                  <DashboardStats />
 
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    <SalesChart />
-                    <div className="mt-6">
-                      <OrdersTable />
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <LowStock />
-                    <LowStockMaterials />
-                    <EventRequests />
-                    <Feedbacks />
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                      <div className="bg-white p-4 rounded shadow-sm">
-                        <h3 className="text-lg font-medium text-[#5E372E]">Cakes & Pastries</h3>
-                        <div className="mt-4 grid grid-cols-2 gap-4">
-                          <img src="/images/cakes.jpg" alt="cakes" className="w-full h-36 object-cover rounded" />
-                          <img src="/images/pastries.jpg" alt="pastries" className="w-full h-36 object-cover rounded" />
-                        </div>
+                      <SalesChart />
+                      <div className="mt-6">
+                        <OrdersTable />
                       </div>
                     </div>
-                    <div>
-                      <QuickLinks onNavigate={setSelectedTab} />
+
+                    <div className="space-y-6">
+                      <LowStock />
+                      <LowStockMaterials />
+                      <EventRequests />
+                      <Feedbacks />
                     </div>
                   </div>
-                </div>
-              </>
-            )}
 
-            {selectedTab === 'Products' && (
-              <ProductsManagementPage />
-            )}
+                  <div className="mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2">
+                        <div className="bg-white p-4 rounded shadow-sm">
+                          <h3 className="text-lg font-medium text-[#5E372E]">Cakes & Pastries</h3>
+                          <div className="mt-4 grid grid-cols-2 gap-4">
+                            <img src="/images/cakes.jpg" alt="cakes" className="w-full h-36 object-cover rounded" />
+                            <img src="/images/pastries.jpg" alt="pastries" className="w-full h-36 object-cover rounded" />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <QuickLinks onNavigate={(tab) => setSearchParams({ tab })} />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
-            {selectedTab === 'Materials' && (
-              <MaterialsManagementPage />
-            )}
+              {selectedTab === 'Products' && (
+                <ProductsManagementPage />
+              )}
 
-            {selectedTab === 'Analytics' && (
-              <AnalyticsDashboard />
-            )}
+              {selectedTab === 'Materials' && (
+                <MaterialsManagementPage />
+              )}
 
-            {selectedTab === 'Inventory' && (
-              <InventoryPage />
-            )}
+              {selectedTab === 'Analytics' && (
+                <AnalyticsDashboard />
+              )}
 
-            {selectedTab === 'Events' && (
-              <AdminEventsPage />
-            )}
+              {selectedTab === 'Inventory' && (
+                <InventoryPage />
+              )}
 
-            {selectedTab === 'Users' && (
-              <UsersManagementPage />
-            )}
+              {selectedTab === 'Events' && (
+                <AdminEventsPage />
+              )}
 
-            {selectedTab === 'Orders' && (
-              <OrdersManagementPage />
-            )}
+              {selectedTab === 'Users' && (
+                <UsersManagementPage />
+              )}
 
-            {selectedTab === 'Drivers' && (
-              <DriversManagementPage />
-            )}
+              {selectedTab === 'Orders' && (
+                <OrdersManagementPage />
+              )}
 
-            {selectedTab === 'Messages' && (
-              <AdminMessagesPage />
-            )}
+              {selectedTab === 'Drivers' && (
+                <DriversManagementPage />
+              )}
 
-            {selectedTab === 'Notifications' && (
-              <AdminNotificationsPage />
-            )}
-          </main>
+              {selectedTab === 'Messages' && (
+                <AdminMessagesPage />
+              )}
+
+              {selectedTab === 'Notifications' && (
+                <AdminNotificationsPage />
+              )}
+            </main>
           </ToastProvider>
         </div>
       </div>

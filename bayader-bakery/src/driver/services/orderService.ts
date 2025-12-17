@@ -39,6 +39,10 @@ export interface DriverOrder {
   createdAt: string
   updatedAt: string
   assignedDriver?: string
+  payment?: {
+    method: string
+    paid: boolean
+  }
 }
 
 export interface OrderResponse {
@@ -158,7 +162,7 @@ class OrderService {
     try {
       // Fetch all orders and calculate stats
       const orders = await this.getMyOrders(1, 1000)
-      
+
       const stats = {
         total: orders.length,
         pending: orders.filter(o => o.deliveryStatus === 'pending').length,
@@ -180,14 +184,14 @@ class OrderService {
    */
   formatAddress(address?: DeliveryAddress | null): string {
     if (!address) return 'Pickup Order'
-    
+
     const parts = []
     if (address.line1) parts.push(address.line1)
     if (address.line2) parts.push(address.line2)
     if (address.city) parts.push(address.city)
     if (address.postalCode) parts.push(address.postalCode)
     if (address.country) parts.push(address.country)
-    
+
     return parts.length > 0 ? parts.join(', ') : 'No address provided'
   }
 
