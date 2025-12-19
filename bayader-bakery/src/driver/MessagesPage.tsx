@@ -388,8 +388,10 @@ const MessagesPage: React.FC = () => {
             <h3 className="text-lg font-semibold text-[#5E372E] mb-4">New Message</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+                <label htmlFor="recipient-select" className="block text-sm font-medium text-gray-700 mb-1">To</label>
                 <select
+                  id="recipient-select"
+                  aria-label="Select message recipient"
                   value={recipientId}
                   onChange={(e) => setRecipientId(e.target.value)}
                   className="w-full border border-[#f3e7d9] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5E372E]"

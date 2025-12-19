@@ -82,7 +82,8 @@ class MessageService {
   async getUnreadCount(): Promise<number> {
     try {
       const response = await this.api.get<any>('/unread/count')
-      return response.data.data?.count || 0
+      // Server returns { success:true, data: { unreadCount } }
+      return response.data?.data?.unreadCount || 0
     } catch (error) {
       console.error('Failed to fetch unread count:', error)
       return 0
@@ -106,13 +107,9 @@ class MessageService {
    * Mark all messages as read
    */
   async markAllAsRead(): Promise<any> {
-    try {
-      const response = await this.api.patch<any>('/read-all')
-      return response.data
-    } catch (error) {
-      console.error('Failed to mark all messages as read:', error)
-      throw error
-    }
+    // Not implemented on server for messages; keep as no-op and log.
+    console.warn('markAllAsRead() not implemented on server for messages')
+    return null
   }
 
   /**
@@ -164,7 +161,8 @@ class MessageService {
    */
   async deleteMessage(messageId: string): Promise<any> {
     try {
-      const response = await this.api.delete(`/${messageId}`)
+      // Use soft-archive endpoint (PATCH /:id/archive). DELETE is admin-only on server.
+      const response = await this.api.patch(`/${messageId}/archive`)
       return response.data
     } catch (error) {
       console.error(`Failed to delete message ${messageId}:`, error)
@@ -177,7 +175,7 @@ class MessageService {
    */
   async archiveMessage(messageId: string): Promise<any> {
     try {
-      const response = await this.api.delete(`/${messageId}`)
+      const response = await this.api.patch(`/${messageId}/archive`)
       return response.data
     } catch (error) {
       console.error(`Failed to archive message ${messageId}:`, error)
@@ -250,8 +248,8 @@ class MessageService {
    */
   async archiveConversation(partnerId: string): Promise<any> {
     try {
-      const response = await this.api.put(`/conversations/${partnerId}/archive`);
-      return response.data;
+      console.warn('archiveConversation() not implemented on server');
+      throw new Error('archiveConversation not supported by server API')
     } catch (error) {
       console.error(`Failed to archive conversation with ${partnerId}:`, error);
       throw error;
@@ -263,8 +261,8 @@ class MessageService {
    */
   async unarchiveConversation(partnerId: string): Promise<any> {
     try {
-      const response = await this.api.put(`/conversations/${partnerId}/unarchive`);
-      return response.data;
+      console.warn('unarchiveConversation() not implemented on server');
+      throw new Error('unarchiveConversation not supported by server API')
     } catch (error) {
       console.error(`Failed to unarchive conversation with ${partnerId}:`, error);
       throw error;
